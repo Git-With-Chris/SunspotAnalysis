@@ -1,0 +1,192 @@
+---
+title: "TSA_A3"
+author: "Chris John"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+# **Problem Definition**
+
+# **Aim**
+
+# **Setup**
+
+## Setting Working Directory
+
+```{r message=FALSE, warning=FALSE}
+# Add user working directory path.
+setwd("~/Documents/RMIT/TimeSeriesAnalysis/A2")
+
+# Verify present working directory.
+getwd()
+```
+
+## Dependencies
+
+```{r message=FALSE}
+# Code to install dependencies.
+# install.packages(c('tidyverse', 'TSA', 'forecast', 'lmtest', 'tseries', 'urca'))
+
+# Import Dependencies.
+library(tidyverse)
+library(TSA)
+library(forecast)
+library(lmtest)
+library(urca)
+library(tseries)
+
+# Source Utility Script
+source("./utilities.R")
+```
+
+# **Data**
+
+```{r}
+# Reading Data into R environment.
+sunspot_data <- read.csv('./Resources/YearlySunspotNumber.csv', sep = ';', header = FALSE)
+
+# Extract the first two columns
+sunspot_data <- sunspot_data[, 1:2]
+
+# Assign column names
+colnames(sunspot_data) <- c("Year", "MeanSunspotNumber")
+
+# Display Sunspot Data
+sunspot_data 
+```
+
+```{r}
+# Calculate number of years between 1700 - 2023 (324 years)
+true_years = (2023 - 1700) + 1 
+
+# Verify year count with true year count
+cat("Number of years between 1700 - 2023 (inclusive): ", true_years, 
+    "\nNumber of years accounted for out of 324 years: ", sunspot_data %>% nrow(),
+    "\nCount of null values in the data set: ", sum(is.na(sunspot_data$MeanSunspotNumber.)))
+
+```
+
+## Convert to TS Object
+
+```{r}
+# Convert data to time series object
+sunspot_TS <- sunspot_data$MeanSunspotNumber %>% ts(start = 1700,
+                                                     end = 2023,
+                                                     frequency = 1)
+# View series
+sunspot_TS 
+```
+
+# **EDA**
+
+## Exploration
+
+```{r}
+# Verify Data type 
+sunspot_TS %>% class()
+
+# Summarize the time series object
+sunspot_TS %>% summary()
+```
+
+```{r fig.align='center', fig.width=8, fig.height=3}
+# Create box plot to visualize sunspot number
+sunspot_TS %>% boxplot(horizontal = TRUE, 
+                       main = "Figure 1: Yearly Mean Sunspot Number (1700-2023)",
+                       xlab = "Mean Sunspot Number", 
+                       border = "black")
+# Add grid
+grid(nx = NULL, ny = NULL, col = "gray", lty = "dotted")
+```
+
+## Visualizing data
+
+```{r fig.align='center', fig.width=15, fig.height=6}
+# Plot sunspot series across time
+sunspot_TS %>% plot(type = 'o',
+                    main = "Figure 2: Yearly Mean Sunspot Number (1700-2023)", 
+                    xlab = "Year", 
+                    ylab = "Mean Sunspot Number")
+
+# Add grid
+grid(nx = NULL, ny = NULL, col = "gray", lty = "dotted")
+```
+
+## ACF and PACF
+
+```{r fig.height=6, fig.width=17}
+# Set up a 1x2 layout for plots
+par(mfrow=c(1,2))
+
+# Plot ACF plot.
+sunspot_TS %>% acf(lag.max = 50,
+                   main = "Figure 3.1: Autocorrelation Function (ACF) of Temperature Anomalies",
+                   xlab = "Lag", 
+                   ylab = "ACF")
+
+# Plot PACF plot.
+sunspot_TS %>% pacf(lag.max = 50,
+                    main = "Figure 3.2: Partial Autocorrelation Function (PACF) of Temperature Anomalies",
+                    xlab = "Lag", 
+                    ylab = "PACF")
+```
+
+```{r}
+# Augmented Dickey-Fuller Test for stationarity
+sunspot_TS %>% adf.test()
+
+# Phillips-Perron Unit Root Test for stationarity
+sunspot_TS %>% pp.test()
+```
+
+```{r}
+model <- Arima(sunspot_TS, order = c(3,0,0), seasonal = list(order=c(0,2,0), period=12))
+
+res_model <- rstandard(model)
+
+plot(res_model)
+
+res_model %>% acf(lag.max = 100)
+res_model %>% pacf(lag.max = 100)
+
+
+```
+
+
+
+
+```{r}
+model <- auto.arima(sunspot_TS)
+r <- forecast(model)
+
+r %>% plot()
+
+model %>% summary()
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
