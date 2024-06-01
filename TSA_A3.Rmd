@@ -43,16 +43,16 @@ source("./utilities.R")
 
 ```{r}
 # Reading Data into R environment.
-sunspot_data <- read.csv('./Resources/YearlySunspotNumber.csv', sep = ';', header = FALSE)
+sunspot_data <- read.csv('./Resources/YearlySunspotData.csv', sep = ';', header = FALSE)
 
 # Extract the first two columns
 sunspot_data <- sunspot_data[, 1:2]
 
 # Assign column names
-colnames(sunspot_data) <- c("Year", "MeanSunspotNumber")
+colnames(sunspot_data) <- c("Year","MeanSunspotNumber")
 
 # Display Sunspot Data
-sunspot_data 
+sunspot_data %>% head(15)
 ```
 
 ```{r}
@@ -62,7 +62,7 @@ true_years = (2023 - 1700) + 1
 # Verify year count with true year count
 cat("Number of years between 1700 - 2023 (inclusive): ", true_years, 
     "\nNumber of years accounted for out of 324 years: ", sunspot_data %>% nrow(),
-    "\nCount of null values in the data set: ", sum(is.na(sunspot_data$MeanSunspotNumber.)))
+    "\nCount of null values in the data set: ", sum(is.na(sunspot_data$MeanSunspotNumber)))
 
 ```
 
@@ -70,10 +70,8 @@ cat("Number of years between 1700 - 2023 (inclusive): ", true_years,
 
 ```{r}
 # Convert data to time series object
-sunspot_TS <- sunspot_data$MeanSunspotNumber %>% ts(start = 1700,
-                                                     end = 2023,
-                                                     frequency = 1)
-# View series
+sunspot_TS <- sunspot_data$MeanSunspotNumber %>% ts(frequency = 11)
+# View first 10 years of the series
 sunspot_TS 
 ```
 
@@ -101,7 +99,7 @@ grid(nx = NULL, ny = NULL, col = "gray", lty = "dotted")
 
 ## Visualizing data
 
-```{r fig.align='center', fig.width=15, fig.height=6}
+```{r fig.align='center', fig.width=15, fig.height=7}
 # Plot sunspot series across time
 sunspot_TS %>% plot(type = 'o',
                     main = "Figure 2: Yearly Mean Sunspot Number (1700-2023)", 
@@ -119,13 +117,13 @@ grid(nx = NULL, ny = NULL, col = "gray", lty = "dotted")
 par(mfrow=c(1,2))
 
 # Plot ACF plot.
-sunspot_TS %>% acf(lag.max = 50,
+sunspot_TS %>% acf(lag.max = 70,
                    main = "Figure 3.1: Autocorrelation Function (ACF) of Temperature Anomalies",
                    xlab = "Lag", 
                    ylab = "ACF")
 
 # Plot PACF plot.
-sunspot_TS %>% pacf(lag.max = 50,
+sunspot_TS %>% pacf(lag.max = 70,
                     main = "Figure 3.2: Partial Autocorrelation Function (PACF) of Temperature Anomalies",
                     xlab = "Lag", 
                     ylab = "PACF")
@@ -139,25 +137,254 @@ sunspot_TS %>% adf.test()
 sunspot_TS %>% pp.test()
 ```
 
+```{r fig.align='center', fig.width6, fig.height=4}
+# Plotting a QQ plot for anomaly_TS
+sunspot_TS %>% qqnorm(main = "Figure 4: Normal QQ Plot of Anomaly Series")
+sunspot_TS %>% qqline(col='blue', lty=2)
+```
+
 ```{r}
-model <- Arima(sunspot_TS, order = c(3,0,0), seasonal = list(order=c(0,2,0), period=12))
+# Perform Shapiro-Wilks test for normality. 
+rawTS_shapiro <- sunspot_TS %>% shapiro.test()
+rawTS_shapiro
+```
 
-res_model <- rstandard(model)
+### Box-Cox Transformation
 
-plot(res_model)
+```{r fig.height=6, fig.width=8, fig.align='center', warning=FALSE}
+# Adding a small positive value to ensure non-zero data
+positive_sunspot_TS <- sunspot_TS + (abs(min(sunspot_TS)) + 0.01)
 
-res_model %>% acf(lag.max = 100)
-res_model %>% pacf(lag.max = 100)
+# Applying Box-Cox transformation
+BC <- positive_sunspot_TS %>% BoxCox.ar(lambda = seq(-2, 2, 0.01), method = 'yule-walker')
 
+# Add grid
+grid(nx = NULL, ny = NULL, col = "gray", lty = "dotted")
 
+# Add main title separately
+title(main = 'Figure 5: Optimal Lambda value', adj = 0.5, line = 1.4)
+```
+
+```{r}
+# Use Log-likelihood estimation to find optimal lambda values
+lambda <- BC$lambda[which(max(BC$loglike) == BC$loglike)]
+
+# Print results
+cat("Lower bound Confidence Interval: ", BC$ci[1],
+    "\nUpper bound Confidence Interval: ", BC$ci[2],
+    "\n\nOptimal Lambda value: ", lambda)
+```
+
+```{r fig.height=12, fig.width=19, fig.align='center'}
+# Set up a 1x2 layout for plots
+par(mfrow=c(2,2))
+
+# Plot original anomaly series across time
+sunspot_TS %>% plot(type = 'o',
+                    main = "Figure 6.1: Original Land Temperature Anomalies (1850-2023)", 
+                    xlab = "Year", 
+                    ylab = "Temperature Anomalies (°C)")
+
+# Add grid
+grid(nx = NULL, ny = NULL, col = "gray", lty = "dotted")
+
+# Plot Box-Cox Transformed anomaly series across time
+BC_sunspot_TS <- ((positive_sunspot_TS^lambda) - 1) / lambda
+
+BC_sunspot_TS %>% plot(type = 'o',
+                       main = 'Figure 6.2: Box-Cox Transformed Anomaly series (1850-2023)',
+                       xlab = 'Year',
+                       ylab = 'Transformed Temperature anomalies (°C)')
+
+# Add grid
+grid(nx = NULL, ny = NULL, col = "gray", lty = "dotted")
+
+# Test for normality with Box-Cox transformed series.
+BC_TS_Stest <- BC_sunspot_TS %>% shapiro.test()
+
+# Plotting a QQ plot for anomaly_TS
+sunspot_TS %>% qqnorm(main = "Figure 6.3: Normal QQ Plot of Original Anomaly Series")
+sunspot_TS %>% qqline(col='blue', lty=2) %>% 
+text(x = 1, y = -0.4, 
+     labels = paste0("Shapiro-Wilks (p-value): ", rawTS_shapiro[2]),
+     col='blue', cex=1.5)
+grid(nx = NULL, ny = NULL, col = "gray", lty = "dotted")
+
+# QQ-Plot Box-Cox transformed series
+BC_sunspot_TS %>% qqnorm(main = "Figure 6.4: Normal QQ Plot of Box-Cox Anomaly Series")
+BC_sunspot_TS %>% qqline(lty=2, col='blue') %>% 
+text(x = 1.2, y = -1.255, 
+     labels = paste0("Shapiro-Wilks (p-value): ", BC_TS_Stest[2]),
+     col='blue', cex=1.5)
+grid(nx = NULL, ny = NULL, col = "gray", lty = "dotted")
+```
+
+```{r fig.height=7, fig.width=19, fig.align='center'}
+# Set up a 1x2 layout for plots
+par(mfrow=c(1,2))
+
+# Plot ACF of differenced series
+sunspot_TS %>% acf(main = "Figure 8.1: Autocorrelation Function (ACF) of differenced Anomaly series",
+                        xlab = "Lag", 
+                        ylab = "ACF", lag.max = 70)
+grid()
+
+# Plot ACF of differenced series
+sunspot_TS %>% pacf(main = "Figure 8.2: Partial Autocorrelation Function (PACF) of differenced Anomaly series",
+                         xlab = "Lag", 
+                         ylab = "PACF", lag.max = 70)
+grid()
 ```
 
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r fig.height=6, fig.width=17}
+model <- Arima(sunspot_TS, order = c(0,0,0), seasonal = list(order=c(1,1,1), period=11))
+
+coeftest(model)
+
+res_model <- rstandard(model)
+
+plot(res_model, type='o')
+
+par(mfrow=c(1,2))
+a <- res_model %>% acf(lag.max = 100)
+b <- res_model %>% pacf(lag.max = 100)
+
+```
+
 ```{r}
-model <- auto.arima(sunspot_TS)
-r <- forecast(model)
+a[["acf"]]
+b[["acf"]]
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+# Forecast the next 10 observations
+forecasted_values <- forecast(model, h = 100)
+
+# Plot the forecasted values
+plot(forecasted_values, main = 'Forecast for the Next 10 Observations')
+# Add the original data to the plot
+lines(sunspot_TS, col = 'blue', lwd = 2)
+
+# Print a summary of the model
+summary(model)
+```
+
+```{r fig.height=8, fig.width=17}
+# Load necessary packages
+library(forecast)
+
+# Assuming sunspot_TS is your time series data
+# Fit the specified ARIMA model to the data
+model <- Arima(sunspot_TS, order = c(2,0,1), seasonal = list(order = c(0,0,0), period = 1))
+
+# Generate the fitted values
+fitted_values <- fitted(model)
+
+# Forecast the next 10 observations
+forecasted_values <- forecast(model, h = 10)
+
+# Plot the original time series
+plot(sunspot_TS, type = 'l', col = 'blue', lwd = 2, 
+     main = 'Original Time Series with Model Predictions and Forecasts',
+     ylab = 'Sunspot Data', xlab = 'Time')
+
+# Overlay the fitted values
+lines(fitted_values, col = adjustcolor('red', alpha.f = 0.5), lwd = 2)
+
+# Overlay the forecasted values
+lines(forecasted_values$mean, col = 'green', lwd = 2)
+
+# Adding forecast intervals (optional)
+lines(forecasted_values$lower[,2], col = 'green', lty = 2)
+lines(forecasted_values$upper[,2], col = 'green', lty = 2)
+
+# Add a legend
+legend("topleft", legend = c("Original Data", "Fitted Values", "Forecasted Values"), 
+       col = c("blue", "red", "green"), lwd = 2)
+
+```
+
+
+
+```{r}
+a
+```
+
+```{r}
+b
+```
+
+
+```{r}
+model <- auto.arima(sunspot_TS,)
+r <- forecast(model, h = 10)
 
 r %>% plot()
 
