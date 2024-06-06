@@ -1,0 +1,403 @@
+---
+title: "TSA-A3-final"
+author: "Chris John"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+# **Problem Definition**
+The goal of this project is to analyze the yearly mean sunspot numbers dataset from 1700 to 2023, obtained from the Solar Influences Data Analysis Center of the Royal Observatory of Belgium (available [here](https://www.sidc.be/SILSO/infosnytot)). This dataset represents the yearly mean total sunspot number, calculated as the arithmetic mean of the daily total sunspot number for each year. 
+
+The project aims to provide insights into trends and develop a reliable model for the data. Sunspots, which are temporary phenomena on the Sun's photosphere appearing as darker spots, are crucial for understanding solar cycles with implications for space weather and climate. Understanding their patterns and periodicity is essential for these analyses.
+
+# **Aim**
+The primary objectives are as follows:
+
+1. Conduct an initial exploratory data analysis to understand the characteristics, trends, and patterns present in the dataset. This analysis will involve examining summary statistics, visualizations such as time series plots, and identifying any notable features or anomalies.
+
+2. Propose a set of possible models using various model specification tools such as Autocorrelation Function (ACF), Partial Autocorrelation Function (PACF), Extended Autocorrelation Function (EACF), and Bayesian Information Criterion (BIC) table.
+
+3. Fit all the proposed models to the dataset to obtain parameter estimates. This step involves interpreting the estimated coefficients and assessing their significance.
+    
+4. Using the goodness-of-fit metrics such as Akaike Information Criterion (AIC), Bayesian Information Criterion (BIC), Mean Squared Error (MSE), etc., to compare, select the best-fitted model among the set of proposed models and utilizing that best model to forecast for next 10 years.
+
+# **Setup**
+This section ensures that the necessary setup steps are performed before proceeding with the analysis, including setting the working directory and importing required packages for data manipulation, visualization, and time series analysis.This preparation step is crucial for conducting a smooth and effective analysis process.
+
+## Setting Working Directory
+
+```{r message=FALSE, warning=FALSE}
+# Add user working directory path.
+setwd("~/Documents/RMIT/TimeSeriesAnalysis/TSA-A3")
+
+# Verify present working directory.
+getwd()
+```
+
+## Dependencies
+
+```{r message=FALSE}
+# Code to install dependencies.
+# install.packages(c('tidyverse', 'TSA', 'forecast', 'lmtest', 'tseries', 'urca'))
+
+# Import Dependencies.
+library(tidyverse)
+library(TSA)
+library(forecast)
+library(lmtest)
+library(urca)
+library(tseries)
+
+# Source Utility Script
+source("./utilities.R")
+```
+
+Details on the functions used from the Utility Script (utilities.R) can be found in the Appendix section of this report.
+
+# **Data**
+
+The data set under analysis in this assignment represents yearly mean Sunspot Numbers, calculated as the arithmetic mean of the daily total sunspot number for each year from 1700-2023. Sourced from Solar Influences Data Analysis Center of the Royal Observatory of Belgium (available [here](https://www.sidc.be/SILSO/infosnytot)), the data set offers insights into long-term climate trends and variations.
+
+```{r}
+# Reading Data into R environment.
+sunspot_data <- read.csv('./Resources/YearlySunspotData.csv', sep = ';', header = FALSE)
+
+# Extract the first two columns
+sunspot_data <- sunspot_data[, 1:2]
+
+# Assign column names
+colnames(sunspot_data) <- c("Year","MeanSunspotNumber")
+
+# Display Sunspot Data
+sunspot_data %>% head(15)
+```
+
+The data set consists of observations starting from 1700 to 2023 (constituting 324 years inclusive of the start and end terms). It is essential to check if all years are accounted for in the data set without inconsistent or null values as this might be an indication to an incomplete sequence.
+
+```{r}
+# Calculate number of years between 1700 - 2023 (324 years)
+true_years = (2023 - 1700) + 1 
+
+# Verify year count with true year count
+cat("Number of years between 1700 - 2023 (inclusive): ", true_years, 
+    "\nNumber of years accounted for out of 324 years: ", sunspot_data %>% nrow(),
+    "\nCount of null values in the data set: ", sum(is.na(sunspot_data$MeanSunspotNumber)))
+```
+
+## Convert to TS Object
+
+Converting CSV (Comma-Separated Values) data to a ts() object in R for time series analysis serves the purpose of enabling efficient manipulation, exploration, and modeling of time-dependent data using specialized functions and tools designed for such analyses.
+
+Time series data inherently includes temporal information, such as time stamps or time intervals between observations. The conversion to a `ts()` object ensures that R can effectively recognize and leverage this temporal aspect of the data for conducting time-based analyses, thus avoiding the risk of overlooking or disregarding important temporal characteristics.
+
+**Note**: The frequency for the observed series is set to 11 for two primary reasons. Firstly, the ACF plot of the raw series reveals periodic cycles occurring roughly every 11 years. Secondly, detailed domain analysis of solar cycles corroborates this pattern, as each solar cycle is approximately 11 years in duration.
+
+```{r}
+# Convert data to time series object
+sunspot_TS <- sunspot_data$MeanSunspotNumber %>% ts(frequency = 11)
+                                                    
+# View first 20 years of the series
+sunspot_TS %>% head(20)
+```
+
+# **EDA**
+
+The Exploratory Data Analysis (EDA) section initiates the exploration and summarization of the time series data being analyzed. This involves verifying the data type of the time series object (sunspot_TS) to ensure its suitability for further analysis. Furthermore, summary statistics are provided to offer a comprehensive overview of the distribution and features of the mean sunspot numbers data.
+
+## Exploration
+
+```{r}
+# Verify Data type 
+sunspot_TS %>% class()
+
+# Summarize the time series object
+sunspot_TS %>% summary()
+```
+
+```{r fig.align='center', fig.width=8, fig.height=3}
+# Create box plot to visualize sunspot number
+sunspot_TS %>% boxplot(horizontal = TRUE, 
+                       main = "Figure 1: Yearly Mean Sunspot Number (1700-2023)",
+                       xlab = "Mean Sunspot Number", 
+                       border = "black")
+# Add grid
+grid(nx = NULL, ny = NULL, col = "gray", lty = "dotted")
+```
+
+The summary statistics offer insight into the distribution of sunspots spanning from 1700 to 2023. The minimum value of 0.00 and a median value of 65.55 indicating an almost near even split where almost half of the recorded sunspots are below this value and the other half are above. These statistics provide a glimpse into the variability and range of mean sunspots over the analyzed time frame. 
+
+Moreover, the box plot (Figure 1) demonstrates a relatively uniform distribution of number of sunspot observations without many outliers. There are only 3 outliers observed which exhibits the largest sunspot areas within the series.
+
+## Visualizing data
+
+In this section, a time series plot is created to depict the trajectory of sunspots over time. The goal is to extract meaningful insights regarding the data’s characteristics, including trends, seasonality, variance changes, potential change points, and overall data behavior. This step is crucial for informing the model selection process and guiding decision-making effectively.
+
+```{r fig.align='center', fig.width=15, fig.height=7}
+# Plot sunspot series across time
+sunspot_TS %>% plot(type = 'o',
+                    main = "Figure 2: Yearly Mean Sunspot Number (1700-2023)", 
+                    xlab = "Year", 
+                    ylab = "Mean Sunspot Number")
+
+# Add grid
+grid(nx = NULL, ny = NULL, col = "gray", lty = "dotted")
+```
+
+## Plot Analysis
+
+1. **Trend**:
+
+    The plot indicates that there is minimal trend present within the sunspot number data. This initial visual assessment suggests that the series exhibits stationarity, a crucial characteristic of time series data. Stationarity implies that the statistical properties of the series, such as the mean and variance, remain consistent over time. This consistency is essential for many time series analysis techniques, as it allows for more accurate modeling and forecasting. Therefore, the lack of a clear trend and the apparent stability of the statistical properties in the plot support the hypothesis that the series is stationary (based on visual assessment).
+
+2. **Seasonality**:
+
+    The time series plot clearly exhibits seasonality in the data. Seasonality refers to patterns that repeat over specific periods, such as a year, quarter, or month. In this case, there is a distinct pattern of ups and downs recurring across the years, as evident in the graph. These regular fluctuations indicate that the data has a seasonal component, which is an important aspect to consider in time series analysis and forecasting. Recognizing seasonality helps in building more accurate models by accounting for these predictable changes.
+
+3. **Changing Variance**:
+
+    Visual inspection of the time series reveals fluctuations in the variability of sunspot observations. These fluctuations manifest as periodic bursts of high variability, followed by intervals with significantly lower variance. During these lower variance periods, the data points exhibit minimal dispersion. This pattern indicates that the sunspot observations experience cycles of high and low activity, which is crucial for understanding the underlying dynamics of the series.
+
+4. **Behavior**:
+
+    The time series plot exhibits strong and predominant autoregressive (AR) behavior, as most points show a pattern where past observations influence future ones, indicating a relationship between successive observations. However, there are regions, albeit minimal, that display jumps and gaps, particularly near the peaks and tails of each cycle, suggesting a possible moving average (MA) influence. These variations might also be attributed to the strong seasonality observed in the series. The combination of AR behavior and occasional MA characteristics highlights the complex dynamics of the sunspot observations, where both past values and random shocks play a role in shaping the time series.
+
+5. **Change/Intervention Point**:
+
+    A change point can be defined as a juncture in the series where there is an abrupt and notable alteration in its behavior or trend. Based on this definition, it could be argued that no distinct change point is discernible in the series. The overall behavior of the series remains relatively consistent, without any abrupt shifts or notable deviations that would indicate a significant change in the underlying pattern or trend. This suggests that the series maintains its general characteristics throughout the observed period.
+
+## Assessing Auto-Correlation
+
+As observed in the previous section [Visualizing Data](#visualizing-data), the series exhibits indications of autocorrelation. To further explore and gain deeper insights into the data, we will conduct an autocorrelation analysis by examining the correlation of the series with its first and second lag.
+
+```{r}
+# Creating first and second lags for data
+series <- sunspot_TS
+first_lag <- zlag(sunspot_TS)
+second_lag <- zlag(zlag(sunspot_TS))
+
+# Setting index for correlation test
+index1 <- 2:length(first_lag)
+index2 <- 3:length(second_lag)
+
+# Pearson's Correlation Test for first and second lag's
+cor_first_lag <- cor(series[index1], first_lag[index1])
+cor_second_lag <- cor(series[index2], second_lag[index2])
+
+# Results of Pearson's correlation coefficient test
+cat("Pearson's Correlation between series and first lag: ", cor_first_lag %>% round(4), 
+    "\nPearson's Correlation between series and second lag: ", cor_second_lag %>% round(4))
+
+```
+
+```{r fig.height=5, fig.width=15}
+# Set up a 1x2 layout for plots
+par(mfrow=c(1,2))
+
+# Visualization of correlation between series and first lag
+series[index1] %>% plot(first_lag[index1],
+                        xlab = "First Lag of Sunspot's Series",
+                        ylab = "Shares Series",
+                        main = "Figure 3.1: Scatterplot of Sunspot's series and it's First Lag") %>% 
+                   text(x=40, y=260, col='blue',
+                        labels=paste0("Correlation value: ", cor_first_lag %>% round(4)))
+
+# Add grid
+grid(nx = NULL, ny = NULL, col = "gray", lty = "dotted")
+
+# Visualization of correlation between series and second lag
+series[index2] %>% plot(second_lag[index2],                        
+                        xlab = "Second Lag of Sunspot's Series",
+                        ylab = "Share's Series",
+                        main = "Figure 3.2:Scatterplot of Sunspot's series and it's Second Lag") %>% 
+                   text(x=40, y=260, col='blue', 
+                        labels=paste0("Correlation value: ", cor_second_lag %>% round(4)))
+
+# Add grid
+grid(nx = NULL, ny = NULL, col = "gray", lty = "dotted")
+```
+
+The values obtained from the Pearson's Correlation Test indicate strong positive correlations between the series and its first lag, and a moderately positive correlation with its second lag. Additionally, the scatter plots (Figure 3.1 & 3.2) visualize this correlation between the series and its first and second lags. Both plots depict a clear positive linear relationship, with the first lag showing a more dominant linear relationship. This suggests that the current values of the series are heavily influenced by their immediate past values, reinforcing the presence of auto-regressive behavior in the data.
+
+## Assessing Stationarity
+
+From the visual assessment of the sunspot series in the time series plot (Figure 2), there was no indication of a clear trend being present in the series. However, to confirm this observation, this section will include further analysis using various tests and tools. Specifically, we will analyze the Autocorrelation Function (ACF) and Partial Autocorrelation Function (PACF) plots, and conduct statistical tests for stationarity. These methods will provide a more rigorous evaluation of the series' properties and help determine if the initial visual assessment holds true.
+
+### ACF and PACF plot
+
+```{r fig.height=6, fig.width=17}
+# Set up a 1x2 layout for plots
+par(mfrow=c(1,2))
+
+# Plot ACF plot.
+sunspot_TS %>% acf(lag.max = 70,
+                   main = "Figure 4.1: Autocorrelation Function (ACF) of Yearly Sunspot Numbers",
+                   xlab = "Lag", 
+                   ylab = "ACF")
+
+# Add grid
+grid(nx = NULL, ny = NULL, col = "gray", lty = "dotted")
+
+# Plot PACF plot.
+sunspot_TS %>% pacf(lag.max = 70,
+                    main = "Figure 4.2: Partial Autocorrelation Function (PACF) of Yearly Sunspot Numbers",
+                    xlab = "Lag", 
+                    ylab = "PACF")
+
+# Add grid
+grid(nx = NULL, ny = NULL, col = "gray", lty = "dotted")
+```
+
+From the ACF plot (Figure 4.1), we do not observe a slowly decaying pattern, which is typically expected in a non-stationary series. This might indicate that the series is stationary. However, the PACF plot shows a significant first lag, possibly due to underlying seasonality, which could suggest the presence of non-stationarity. Given that the time series plot (Figure 2) and ACF plot (Figure 4.1) seem to support the presence of stationarity, while the PACF plot (Figure 4.2) suggests a possibility of non-stationarity, we need to employ statistical tests to gain conclusive evidence. These tests will confirm the presence or absence of stationarity in the series, providing a more definitive assessment.
+
+### Statistical Tests for Sationarity
+
+```{r warning=FALSE}
+# Augmented Dickey-Fuller Test for stationarity
+sunspot_TS %>% adf.test()
+
+# Phillips-Perron Unit Root Test for stationarity
+sunspot_TS %>% pp.test()
+```
+
+Both the Augmented Dickey-Fuller Test and Phillips-Perron Test yield p-values of lower than 0.01, well below the conventional threshold of 0.05, confirming that the yearly sunspot series is stationary. Given that the time series plot (Figure 2), the ACF plot (Figure 4.1), and both the Augmented Dickey-Fuller Test and Phillips-Perron Test show evidence of stationarity in the series, this collective evidence strongly indicates stationarity in our series.
+
+## Assessing Normality
+
+This section will investigate the presence of normality in the series, as normality is an underlying assumption of modeling methods like Maximum Likelihood Estimation (MLE), which will be employed in the modeling sections of this analysis. Assessing normality is crucial to ensure the validity of the modeling approach and to make accurate inferences from the data. To visually and statistically assess normality, we can use tools such as histograms, Q-Q plots, and normality tests like the Shapiro-Wilk test.
+
+```{r fig.align='center', fig.width=16, fig.height=5}
+# Set up a 1x2 layout for plots
+par(mfrow=c(1,2))
+
+# Plotting a Histogram for sunspot_TS
+sunspot_TS %>% hist(main = "Figure 5.1: Histogram of Sunspot Series",
+                    xlab = "Sunspot Values")
+
+# Add grid
+grid(nx = NULL, ny = NULL, col = "gray", lty = "dotted")
+
+# Plotting a QQ plot for sunspot_TS
+sunspot_TS %>% qqnorm(main = "Figure 5.2: Normal QQ Plot of Sunspot Series")
+sunspot_TS %>% qqline(col='blue', lty=2)
+
+# Add grid
+grid(nx = NULL, ny = NULL, col = "gray", lty = "dotted")
+```
+
+```{r}
+# Perform Shapiro-Wilks test for normality. 
+rawTS_shapiro <- sunspot_TS %>% shapiro.test()
+rawTS_shapiro
+```
+
+The above histogram (Figure 5.1) does not show a clear normal distribution of the sunspot numbers. Similarly, the QQ-Plot (Figure 5.2) does not indicate normality due to the significant deviation of the observations from the reference line. The Shapiro-Wilk test further supports this, with a p-value of 4.853×10−124.853×10−12, which is significantly lower than the conventional threshold of 0.05. This strongly suggests that the series does not exhibit normality. Given this lack of normality, appropriate transformations of the data may need to be considered to improve the normality of the series.
+
+# **Data Transformation**
+
+In order to improve the normality of the series, we will be using the Box-Cox transformation to find an optimal transformation for the series. This process will include determining an optimal lambda value and transforming the data based on this value.
+
+## Box-Cox Transformation
+
+```{r fig.height=6, fig.width=8, fig.align='center', warning=FALSE}
+# Adding a small positive value to ensure non-zero data
+positive_sunspot_TS <- sunspot_TS + (abs(min(sunspot_TS)) + 0.01)
+
+# Applying Box-Cox transformation
+BC <- positive_sunspot_TS %>% BoxCox.ar(lambda = seq(-2, 2, 0.01), method = 'yule-walker')
+
+# Add grid
+grid(nx = NULL, ny = NULL, col = "gray", lty = "dotted")
+
+# Add main title separately
+title(main = 'Figure 6: Optimal Lambda value', adj = 0.5, line = 1.4)
+```
+
+```{r}
+# Use Log-likelihood estimation to find optimal lambda values
+lambda <- BC$lambda[which(max(BC$loglike) == BC$loglike)]
+
+# Print results
+cat("Lower bound Confidence Interval: ", BC$ci[1],
+    "\nUpper bound Confidence Interval: ", BC$ci[2],
+    "\n\nOptimal Lambda value: ", lambda)
+```
+
+The optimal lambda value for the Box-Cox transformation is determined using log-likelihood estimation. The Box-Cox transformation function generates a range of lambda values from -2 to 2 with an increment of 0.01. For each lambda value, the log-likelihood of the transformed data is computed. The lambda value corresponding to the highest log-likelihood is considered optimal as it indicates the transformation that best fits the data.
+
+Regarding the confidence intervals, they provide insights into the reliability of the transformation. The confidence intervals, typically derived from statistical tests, indicate a range of lambda values within which the transformation is deemed statistically valid or effective.
+
+These values suggest that lambda values between approximately 0.44 and 0.56 are likely to produce meaningful transformations of the data. Therefore, for the subsequent analysis phases, the optimal lambda value of approximately 0.49 should be considered for applying the Box-Cox transformation.
+
+```{r fig.height=12, fig.width=19, fig.align='center'}
+# Set up a 1x2 layout for plots
+par(mfrow=c(2,2))
+
+# Plot original sunspot series across time
+sunspot_TS %>% plot(type = 'o',
+                    main = "Figure 7.1: Original Sunspot series (1850-2023)", 
+                    xlab = "Year", 
+                    ylab = "Temperature Anomalies (°C)")
+
+# Add grid
+grid(nx = NULL, ny = NULL, col = "gray", lty = "dotted")
+
+# Plot Box-Cox Transformed sunspot series across time
+BC_sunspot_TS <- ((positive_sunspot_TS^lambda) - 1) / lambda
+
+BC_sunspot_TS %>% plot(type = 'o',
+                       main = 'Figure 7.2: Box-Cox Transformed Sunspot series (1850-2023)',
+                       xlab = 'Year',
+                       ylab = 'Transformed Temperature anomalies (°C)')
+
+# Add grid
+grid(nx = NULL, ny = NULL, col = "gray", lty = "dotted")
+
+# Test for normality with Box-Cox transformed series.
+BC_TS_Stest <- BC_sunspot_TS %>% shapiro.test()
+
+# Plotting a QQ plot for sunspot_TS
+sunspot_TS %>% qqnorm(main = "Figure 7.3: Normal QQ Plot of Original Sunspot series")
+sunspot_TS %>% qqline(col='blue', lty=2) %>% 
+text(x = 1.4, y = 3, 
+     labels = paste0("Shapiro-Wilks (p-value): ", rawTS_shapiro[2]),
+     col='blue', cex=1.5)
+grid(nx = NULL, ny = NULL, col = "gray", lty = "dotted")
+
+# QQ-Plot Box-Cox transformed series
+BC_sunspot_TS %>% qqnorm(main = "Figure 7.4: Normal QQ Plot of Box-Cox Sunspot series")
+BC_sunspot_TS %>% qqline(lty=2, col='blue') %>% 
+text(x = 1.2, y = -1.7, 
+     labels = paste0("Shapiro-Wilks (p-value): ", BC_TS_Stest[2]),
+     col='blue', cex=1.5)
+grid(nx = NULL, ny = NULL, col = "gray", lty = "dotted")
+```
+
+Although the Box-Cox transformation does not fully achieve normality for the data, it does result in a significant improvement in the normality of the series. The improved normality of the series can be observed through the QQ-Plot of the original and the transformed series (Figure 7.3 & 7.4) Initially, the Shapiro-Wilk test produced a p-value of 4.853e−12, which is extremely low and indicates a strong deviation from normality. After applying the Box-Cox transformation, the Shapiro-Wilk p-value increased to 0.0004. This substantial increase in the p-value reflects a notable enhancement in the normality of the series, making it more suitable for modeling methods that assume normality, such as Maximum Likelihood Estimation (MLE). Given this information we will proceed using the `BC_sunspot_TS` for the successive part of the analysis.
+
+## Addressing Seasonality
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
