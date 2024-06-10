@@ -63,3 +63,80 @@ arima_summary <- function(TS_data, pdq_order){
   # Return the list of models
   return(ret_list)
 }
+
+# ============================================================================= #
+
+# Function for Plotting ACF and PACF Plots
+
+plot_acf_pacf <- function(TS_data, acf_main = 'ACF Plot', pacf_main = 'PACF Plot', max_lag = 30) {
+  # Set up the plotting area to have 2 plots side by side
+  par(mfrow = c(1, 2))
+
+  # Plot ACF
+  acf(TS_data, lag.max = max_lag, main = acf_main, xlab = "Lag", ylab = "ACF")
+  grid(nx = NULL, ny = NULL, col = "gray", lty = "dotted")
+
+  # Plot PACF
+  pacf(TS_data, lag.max = max_lag, main = pacf_main, xlab = "Lag", ylab = "PACF")
+  grid(nx = NULL, ny = NULL, col = "gray", lty = "dotted")
+
+  # Reset plotting area to default
+  par(mfrow = c(1, 1))
+}
+
+# ============================================================================= #
+
+check_residuals <- function(TS_data, order, seasonal_order, period,
+                            acf_lag=60,
+                            pacf_lag=60,
+                            res_main='Residuals',
+                            hist_main='Histogram',
+                            acf_main='ACF',
+                            pacf_main='PACF'){
+  # Set up the plotting area to have 2 plots side by side
+  par(mfrow = c(2, 2))
+
+  # Obtain Residuals
+  residuals <- TS_data %>%
+    Arima(order = order,
+          seasonal = list(order=seasonal_order, period = period)) %>%
+    rstandard()
+
+  # Plot Residuals
+  residuals %>% plot(type = 'o',
+                     main = res_main,
+                     ylab = 'Residuals')
+
+  grid(nx = NULL, ny = NULL, col = "gray", lty = "dotted")
+
+  # Plot Histogram
+  residuals %>% hist(main = hist_main)
+  grid(nx = NULL, ny = NULL, col = "gray", lty = "dotted")
+
+  # Plot ACF
+  residuals %>% acf(main=acf_main, lag.max = acf_lag)
+  grid(nx = NULL, ny = NULL, col = "gray", lty = "dotted")
+
+  # Plot PACF
+  residuals %>% pacf(main=pacf_main, lag.max = pacf_lag)
+  grid(nx = NULL, ny = NULL, col = "gray", lty = "dotted")
+
+  # Reset plotting area to default
+  par(mfrow = c(1, 1))
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -47,6 +47,7 @@ library(forecast)
 library(lmtest)
 library(urca)
 library(tseries)
+library(patchwork)
 
 # Source Utility Script
 source("./utilities.R")
@@ -90,7 +91,7 @@ Converting CSV (Comma-Separated Values) data to a ts() object in R for time seri
 
 Time series data inherently includes temporal information, such as time stamps or time intervals between observations. The conversion to a `ts()` object ensures that R can effectively recognize and leverage this temporal aspect of the data for conducting time-based analyses, thus avoiding the risk of overlooking or disregarding important temporal characteristics.
 
-**Note**: The frequency for the observed series is set to 11 for two primary reasons. Firstly, the ACF plot of the raw series reveals periodic cycles occurring roughly every 11 years. Secondly, detailed domain analysis of solar cycles corroborates this pattern, as each solar cycle is approximately 11 years in duration.
+**Note**: The frequency for the observed series is set to 11 for two primary reasons. Firstly, the ACF plot of the raw series reveals periodic cycles occurring roughly every 11 years which is reported in the Appendix sections of the report. Secondly, detailed domain analysis of solar cycles corroborates this pattern, as each solar cycle is approximately 11 years in duration. The Determining Frequency section in the Appendix includes additional analysis for finding the frequency of the series.
 
 ```{r}
 # Convert data to time series object
@@ -147,7 +148,7 @@ grid(nx = NULL, ny = NULL, col = "gray", lty = "dotted")
 
 1. **Trend**:
 
-    The plot indicates that there is minimal trend present within the sunspot number data. This initial visual assessment suggests that the series exhibits stationarity, a crucial characteristic of time series data. Stationarity implies that the statistical properties of the series, such as the mean and variance, remain consistent over time. This consistency is essential for many time series analysis techniques, as it allows for more accurate modeling and forecasting. Therefore, the lack of a clear trend and the apparent stability of the statistical properties in the plot support the hypothesis that the series is stationary (based on visual assessment).
+    The plot indicates that there is minimal trend present within the sunspot number data. This initial visual assessment suggests that the series exhibits stationarity, a crucial characteristic of time series data. The lack of a clear trend and the apparent stability of the statistical properties in the plot support the hypothesis that the series is stationary or trendless (based on visual assessment). However, we do acknowledge that there is a possibility that the underlying seasonality of the data might be masking the trend.
 
 2. **Seasonality**:
 
@@ -155,15 +156,15 @@ grid(nx = NULL, ny = NULL, col = "gray", lty = "dotted")
 
 3. **Changing Variance**:
 
-    Visual inspection of the time series reveals fluctuations in the variability of sunspot observations. These fluctuations manifest as periodic bursts of high variability, followed by intervals with significantly lower variance. During these lower variance periods, the data points exhibit minimal dispersion. This pattern indicates that the sunspot observations experience cycles of high and low activity, which is crucial for understanding the underlying dynamics of the series.
+    Visual inspection of the time series reveals no severe fluctuations in the variability of sunspot observations. Some fluctuations manifest as periodic bursts of high variability, followed by intervals with significantly lower variance. During these lower variance periods, the data points exhibit minimal dispersion. This pattern indicates that the sunspot observations experience cycles of high and low activity, which is crucial for understanding the underlying dynamics of the series.
 
 4. **Behavior**:
 
-    The time series plot exhibits strong and predominant autoregressive (AR) behavior, as most points show a pattern where past observations influence future ones, indicating a relationship between successive observations. However, there are regions, albeit minimal, that display jumps and gaps, particularly near the peaks and tails of each cycle, suggesting a possible moving average (MA) influence. These variations might also be attributed to the strong seasonality observed in the series. The combination of AR behavior and occasional MA characteristics highlights the complex dynamics of the sunspot observations, where both past values and random shocks play a role in shaping the time series.
+    Due to the presence of seasonality, it is highly likely that the underlying pattern cannot be inferred solely from a visual assessment. The time series plot indicates strong and predominant autoregressive (AR) behavior, as most points exhibit a pattern where past observations influence future ones, suggesting a relationship between successive observations. However, there are minimal regions that display jumps and gaps, particularly near the peaks and tails of each cycle, indicating a possible moving average (MA) influence. This combination of AR behavior and occasional MA characteristics highlights the complex dynamics of the sunspot observations, where both past values and random shocks play a role in shaping the time series.
 
 5. **Change/Intervention Point**:
 
-    A change point can be defined as a juncture in the series where there is an abrupt and notable alteration in its behavior or trend. Based on this definition, it could be argued that no distinct change point is discernible in the series. The overall behavior of the series remains relatively consistent, without any abrupt shifts or notable deviations that would indicate a significant change in the underlying pattern or trend. This suggests that the series maintains its general characteristics throughout the observed period.
+    A change point can be defined as a juncture in the series where there is an abrupt and significant alteration in either the series behavior or trend. Based on this definition, it could be argued that no distinct change point is discernible in the series. The overall behavior of the series remains relatively consistent, without any abrupt shifts or notable deviations that would indicate a **significant** change in the underlying pattern or trend. This suggests that the series maintains its general characteristics throughout the observed period.
 
 ## Assessing Auto-Correlation
 
@@ -225,29 +226,15 @@ From the visual assessment of the sunspot series in the time series plot (Figure
 ### ACF and PACF plot
 
 ```{r fig.height=6, fig.width=17}
-# Set up a 1x2 layout for plots
-par(mfrow=c(1,2))
-
-# Plot ACF plot.
-sunspot_TS %>% acf(lag.max = 70,
-                   main = "Figure 4.1: Autocorrelation Function (ACF) of Yearly Sunspot Numbers",
-                   xlab = "Lag", 
-                   ylab = "ACF")
-
-# Add grid
-grid(nx = NULL, ny = NULL, col = "gray", lty = "dotted")
-
-# Plot PACF plot.
-sunspot_TS %>% pacf(lag.max = 70,
-                    main = "Figure 4.2: Partial Autocorrelation Function (PACF) of Yearly Sunspot Numbers",
-                    xlab = "Lag", 
-                    ylab = "PACF")
-
-# Add grid
-grid(nx = NULL, ny = NULL, col = "gray", lty = "dotted")
+# Use utility script to plot ACF and PACF plot
+sunspot_TS %>% plot_acf_pacf(acf_main = "Figure 4.1: Autocorrelation Function (ACF) of Yearly Sunspot Numbers",
+                             pacf_main = "Figure 4.2: Partial Autocorrelation Function (PACF) of Yearly Sunspot Numbers",
+                             max_lag = 70)
 ```
 
-From the ACF plot (Figure 4.1), we do not observe a slowly decaying pattern, which is typically expected in a non-stationary series. This might indicate that the series is stationary. However, the PACF plot shows a significant first lag, possibly due to underlying seasonality, which could suggest the presence of non-stationarity. Given that the time series plot (Figure 2) and ACF plot (Figure 4.1) seem to support the presence of stationarity, while the PACF plot (Figure 4.2) suggests a possibility of non-stationarity, we need to employ statistical tests to gain conclusive evidence. These tests will confirm the presence or absence of stationarity in the series, providing a more definitive assessment.
+From the ACF plot (Figure 4.1), we do not observe a strict slowly decaying pattern, which is usually expected in a non-stationary series with a distinct trend. However, the ACF plot does show a decaying wave pattern, which strongly indicates seasonality or seasonal-trend in the series, aligning with our conclusion from the time series plot (Figure 2) that the series exhibits seasonality. The PACF plot (Figure 4.2) shows a very high first lag value, which could possibly indicate non-stationarity, but this high value could also be due to the underlying seasonality. Due to the lack of conclusive evidence, we need to employ statistical tests to confirm the presence or absence of stationarity in the series, providing a more definitive assessment.
+
+**Note:** The above plots are generated using a utility script written specifically for the analysis to avoid any repetetive code chunks. Please refer to the Appendix section for further details.
 
 ### Statistical Tests for Sationarity
 
@@ -328,9 +315,9 @@ Regarding the confidence intervals, they provide insights into the reliability o
 
 These values suggest that lambda values between approximately 0.44 and 0.56 are likely to produce meaningful transformations of the data. Therefore, for the subsequent analysis phases, the optimal lambda value of approximately 0.49 should be considered for applying the Box-Cox transformation.
 
-```{r fig.height=12, fig.width=19, fig.align='center'}
+```{r fig.height=15, fig.width=19, fig.align='center'}
 # Set up a 1x2 layout for plots
-par(mfrow=c(2,2))
+par(mfrow=c(3,2))
 
 # Plot original sunspot series across time
 sunspot_TS %>% plot(type = 'o',
@@ -355,8 +342,16 @@ grid(nx = NULL, ny = NULL, col = "gray", lty = "dotted")
 # Test for normality with Box-Cox transformed series.
 BC_TS_Stest <- BC_sunspot_TS %>% shapiro.test()
 
+# Plotting a Histogram for sunspot_TS
+sunspot_TS %>% hist(main = "Figure 7.3: Histogram of Original Sunspot Series",
+                    xlab = "Sunspot Values")
+
+# Plotting a Histogram for sunspot_TS
+BC_sunspot_TS %>% hist(main = "Figure 7.4: Histogram of Transformed Sunspot Series",
+                       xlab = "Sunspot Values")
+
 # Plotting a QQ plot for sunspot_TS
-sunspot_TS %>% qqnorm(main = "Figure 7.3: Normal QQ Plot of Original Sunspot series")
+sunspot_TS %>% qqnorm(main = "Figure 7.5: Normal QQ Plot of Original Sunspot series")
 sunspot_TS %>% qqline(col='blue', lty=2) %>% 
 text(x = 1.4, y = 3, 
      labels = paste0("Shapiro-Wilks (p-value): ", rawTS_shapiro[2]),
@@ -364,7 +359,7 @@ text(x = 1.4, y = 3,
 grid(nx = NULL, ny = NULL, col = "gray", lty = "dotted")
 
 # QQ-Plot Box-Cox transformed series
-BC_sunspot_TS %>% qqnorm(main = "Figure 7.4: Normal QQ Plot of Box-Cox Sunspot series")
+BC_sunspot_TS %>% qqnorm(main = "Figure 7.6: Normal QQ Plot of Transformed Sunspot series")
 BC_sunspot_TS %>% qqline(lty=2, col='blue') %>% 
 text(x = 1.2, y = -1.7, 
      labels = paste0("Shapiro-Wilks (p-value): ", BC_TS_Stest[2]),
@@ -372,9 +367,296 @@ text(x = 1.2, y = -1.7,
 grid(nx = NULL, ny = NULL, col = "gray", lty = "dotted")
 ```
 
-Although the Box-Cox transformation does not fully achieve normality for the data, it does result in a significant improvement in the normality of the series. The improved normality of the series can be observed through the QQ-Plot of the original and the transformed series (Figure 7.3 & 7.4) Initially, the Shapiro-Wilk test produced a p-value of 4.853e−12, which is extremely low and indicates a strong deviation from normality. After applying the Box-Cox transformation, the Shapiro-Wilk p-value increased to 0.0004. This substantial increase in the p-value reflects a notable enhancement in the normality of the series, making it more suitable for modeling methods that assume normality, such as Maximum Likelihood Estimation (MLE). Given this information we will proceed using the `BC_sunspot_TS` for the successive part of the analysis.
+Although the Box-Cox transformation does not fully achieve normality for the data, it does result in a significant improvement in the normality of the series. The improved normality of the series can be observed through the QQ-Plot of the original and the transformed series (Figure 7.3 & 7.4) and also from the histogram of the respective series. Initially, the Shapiro-Wilk test produced a p-value of 4.853e−12, which is extremely low and indicates a strong deviation from normality. 
+
+After applying the Box-Cox transformation, the Shapiro-Wilk p-value increased to 0.0004. This substantial increase in the p-value reflects a notable enhancement in the normality of the series, making it more suitable for modeling methods that assume normality, such as Maximum Likelihood Estimation (MLE). Given this information we will proceed using the `BC_sunspot_TS` for the successive part of the analysis.
+
+**Note**: We do not conduct a stationarity test on the transformed series because we expect the stationarity to remain unaffected by the transformation. The transformation is performed primarily for two reasons: first, to address any variability in our series, and second, to improve the normality of the series. Since the series is already stationary and no ordinary differencing is performed, the stationarity will remain unchanged. However, the appendix section of the report contains additional evidence to confirm this.
+
+# Model Specification
+
+Through the initial exploratory data analysis, we identified a strong seasonal component in the series. The ACF and PACF plots of the non-transformed data further supported this observation. Given the presence of seasonality, we have several options for modeling the sunspot number series. For this analysis, we will proceed with a Seasonal AutoRegressive Integrated Moving Average (SARIMA) modeling approach. This approach allows us to account for both the seasonal and non-seasonal patterns in the data, providing a comprehensive framework for accurate modeling and forecasting of the sunspot numbers.
+
+The SARIMA model can be expressed as follows: **\( \text{SARIMA}(p,d,q)(P,D,Q)_s \)**
+
+where:
+
+  - \( p \) is the order of the non-seasonal autoregressive (AR) component,
+  - \( d \) is the order of non-seasonal differencing,
+  - \( q \) is the order of the non-seasonal moving average (MA) component,
+  - \( P \) is the order of the seasonal autoregressive (SAR) component,
+  - \( D \) is the order of seasonal differencing,
+  - \( Q \) is the order of the seasonal moving average (SMA) component, and
+  - \( s \) is the length of the seasonal cycle i.e. periodicity.
+
+## Exclusion of Trend Models: Rationale
+
+In the analysis of the sunspot number series, we have opted not to use trend models for several reasons. Instead, we chose the Seasonal AutoRegressive Integrated Moving Average (SARIMA) model, which is better suited for capturing the underlying patterns in the data.
+
+Through initial exploratory data analysis and visual inspection of the time series plot, it became evident that the sunspot numbers exhibit a strong seasonal pattern. The Autocorrelation Function (ACF) and Partial Autocorrelation Function (PACF) plots of the non-transformed data further confirmed the presence of seasonality, displaying a decaying wave pattern typical of seasonal data. In contrast, trend models primarily focus on capturing long-term trends and are not designed to account for seasonality effectively.
+
+The sunspot series, characterized by periodic fluctuations **approximately** every 11 years to be precise these cycle exist in the range of 9-14 years meaning there is a variability in this natural phenomenon which requires a model that can explicitly account for these varying cycles. Trend models do not provide mechanisms to capture such cyclical patterns, leading to inadequate representations and potentially misleading forecasts.
+
+The SARIMA model is specifically designed to handle time series data with both seasonal and non-seasonal components. It incorporates terms to address autoregressive behavior, moving averages, and differencing for both seasonal and non-seasonal parts of the series. This makes it a comprehensive and flexible approach for modeling the complex dynamics observed in the sunspot data. By using SARIMA, we can accurately capture the periodicity, autoregressive influences, and any random shocks present in the data.
 
 ## Addressing Seasonality
+
+In this section, we aim to determine the optimal seasonal orders for the SARIMA model, which include the seasonal autoregressive (AR) order (P), seasonal differencing (D), seasonal moving average (MA) order (Q), and the periodicity (s). Accurately identifying these parameters is crucial for capturing the seasonal patterns in the time series data.
+
+To achieve this, we will employ a **residuals-based approach**. This method involves fitting a series of SARIMA models with different combinations of seasonal orders to the time series data. Each model will be evaluated based on how well it captures the underlying seasonal patterns. After fitting each model, we will analyze the residuals for any signs of remaining seasonality. Ideally, the residuals will not show any seasonal pattern, indicating that the model has successfully captured the **seasonal** structure of the data.
+
+We will use tools such as Autocorrelation Function (ACF) and Partial Autocorrelation Function (PACF) plots to examine the residuals. Through this iterative process, we aim to select the most appropriate seasonal orders that provide the best fit for the data. This ensures that the final SARIMA model is robust and capable of accurately capturing the seasonal dynamics present in the time series.
+
+
+```{r fig.height=8, fig.width=25, fig.align='center'}
+# Plot ACF and PACF plots BC_sunspot_TS
+BC_sunspot_TS %>% 
+  plot_acf_pacf(acf_main = "Figure 8.1: Autocorrelation Function (ACF) of Transformed Sunspot Numbers",
+                pacf_main = "Figure 8.2: Partial Autocorrelation Function (PACF) of Transformed Sunspot Numbers",
+                max_lag = 60)
+```
+
+The above ACF of the transformed sunspot series, show that most of the seasonal peaks occur at the 11 year in most cases with only the 4th and 5th seasonal lags showing 
+
+### Seasonal Differencing (D)
+
+In this section, we will perform seasonal differencing on the time series data using a SARIMA(0,0,0)(0,1,0)[11] model. This model has all parameters set to zero except for the seasonal differencing order (D), which is set to 1. The purpose of this configuration is to remove any seasonal pattern with a periodicity of 11 units from the data.
+
+By setting the seasonal differencing component (D) to 1, we expect the residuals of the model to show no remaining seasonal patterns, indicating that the seasonal effects have been effectively removed. This process helps in isolating the underlying trends and irregular components of the time series.
+
+It is crucial to note that setting higher orders for the seasonal differencing parameter (D) can lead to data loss and may result in over-differencing. Over-differencing can distort the data and obscure meaningful patterns, making the time series analysis less reliable. Therefore, careful consideration is required when selecting the order of differencing to ensure that the seasonal effects are adequately removed without compromising the integrity of the data.
+
+```{r fig.height=13, fig.width=22, fig.align='center'}
+# Checking residuals of seasonally differenced model - SARIMA(0,0,0)(0,1,0)[11]
+BC_sunspot_TS %>% check_residuals(order = c(0,0,0), 
+                                  seasonal_order = c(0,1,0),
+                                  period = 11,
+                                  acf_lag = 50,
+                                  pacf_lag = 50,
+                                  res_main = 'Figure 9.1: Residuals of seasonally differenced model SARIMA(0,0,0)(0,1,0)[11]',
+                                  hist_main = 'Figure 9.2: Histogram of residuals',
+                                  acf_main = 'Figure 9.3: ACF plot of residuals',
+                                  pacf_main = 'Figure 9.4: PACF plot of residuals')
+```
+
+We observe that seasonality in the series is significantly reduced, as evidenced by the residuals, which exhibit minimal signs of seasonality. However, it's important to note that not all seasonal components have been fully addressed. This is indicated by the Autocorrelation Function (ACF) and Partial Autocorrelation Function (PACF) plots, which show significant autocorrelation at the seasonal lags. To address this remaining seasonality, we need to determine the appropriate seasonal Autoregressive (AR) and Moving Average (MA) orders for the series.
+
+From the ACF plot, we observe three significant seasonal lags at the first and second seasonal periods. Additionally, the fifth season exhibits a near-significant lag. Given this information, the potential orders for the seasonal MA component (QQ) are likely to be 2 or 3, incorporating the fifth lag.
+
+The PACF plot suggests that the seasonal AR order (PP) is likely to be 0 or 1. This inference is based on the behavior of the PACF, which shows a rapid decay after the first lag.
+
+### Seasonal Orders (P, Q)
+
+```{r fig.height=13, fig.width=22, fig.align='center'}
+# Checking residuals of seasonally differenced model with P and Q orders - SARIMA(0,0,0)(1,1,2)[11]
+BC_sunspot_TS %>% check_residuals(order = c(0,0,0), 
+                                  seasonal_order = c(1,1,2),
+                                  period = 11,
+                                  acf_lag = 50,
+                                  pacf_lag = 50,
+                                  res_main = 'Figure 10.1: Residuals of seasonally differenced model SARIMA(0,0,0)(1,1,2)[11]',
+                                  hist_main = 'Figure 10.2: Histogram of residuals',
+                                  acf_main = 'Figure 10.3: ACF plot of residuals',
+                                  pacf_main = 'Figure 10.4: PACF plot of residuals')
+```
+
+We can observe from the ACF (Figure 10.3) and PACF plot (Figure 10.4) there are no more significant spikes at the seasonal lags. The residuals plot also shows significant reduction in the seasonality when compared to the original series. After experimenting with possible combinations of the P and Q derived from the previous section of the analysis. The SARIMA(0,0,0)(1,1,2)[11] model shows the best results in addressing the seasonal component underlying in the data. 
+
+**Given this information we, set the seasonal orders (P,D,Q) as (1,1,2)**
+
+### Ordinary Differencing (d)
+
+
+```{r fig.height=13, fig.width=22, fig.align='center'}
+# Checking residuals of seasonally differenced model with P and Q orders - SARIMA(0,0,0)(1,1,2)[11]
+BC_sunspot_TS %>% check_residuals(order = c(0,1,0), 
+                                  seasonal_order = c(8,1,2),
+                                  period = 11,
+                                  acf_lag = 50,
+                                  pacf_lag = 50,
+                                  res_main = 'Figure 11.1: Residuals of seasonally differenced model SARIMA(0,1,0)(1,1,2)[11]',
+                                  hist_main = 'Figure 11.2: Histogram of residuals',
+                                  acf_main = 'Figure 11.3: ACF plot of residuals',
+                                  pacf_main = 'Figure 11.4: PACF plot of residuals')
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Appendix
+
+## Dertermining Frequency
+
+### Visual Assessment of ACF
+
+### Residuals Check for Frequency
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+BC_sunspot_TS %>% diff(lag=11) %>%
+  ggtsdisplay(xlab="Year",
+    main="Seasonally differenced H02 scripts")
+```
+
+```{r}
+model <- Arima(BC_sunspot_TS, order=c(7,1,6), seasonal=list(order=c(1,1,2), period=11))
+
+model %>% coeftest()
+
+model %>% summary()
+
+checkresiduals(model, lag=30)
+```
+
+
+<!-- # ```{r} -->
+<!-- # BC_sunspot_TS %>% -->
+<!-- #   Arima(order=c(3,0,2), seasonal=c(3,1,2)) %>% -->
+<!-- #   forecast(h = 10) %>% -->
+<!-- #   autoplot() + -->
+<!-- #     ylab("H02 sales (million scripts)") + xlab("Year") -->
+<!-- # ``` -->
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
