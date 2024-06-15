@@ -85,6 +85,7 @@ cat("Number of years between 1700 - 2023 (inclusive): ", true_years,
     "\nCount of null values in the data set: ", sum(is.na(sunspot_data$MeanSunspotNumber)))
 ```
 
+
 ## Convert to TS Object
 
 Converting CSV (Comma-Separated Values) data to a ts() object in R for time series analysis serves the purpose of enabling efficient manipulation, exploration, and modeling of time-dependent data using specialized functions and tools designed for such analyses.
@@ -127,7 +128,7 @@ grid(nx = NULL, ny = NULL, col = "gray", lty = "dotted")
 
 The summary statistics offer insight into the distribution of sunspots spanning from 1700 to 2023. The minimum value of 0.00 and a median value of 65.55 indicating an almost near even split where almost half of the recorded sunspots are below this value and the other half are above. These statistics provide a glimpse into the variability and range of mean sunspots over the analyzed time frame. 
 
-Moreover, the box plot (Figure 1) demonstrates a relatively uniform distribution of number of sunspot observations without many outliers. There are only 3 outliers observed which exhibits the largest sunspot areas within the series.
+Moreover, the box plot (Figure 1) demonstrates a relatively uniform distribution of number of sunspot observations without many outliers. There are only 3 outliers observed which exhibits the largest sunspot areas within the series on the years 1778, 1957 and 1958.
 
 ## Visualizing data
 
@@ -143,6 +144,7 @@ sunspot_TS %>% plot(type = 'o',
 # Add grid
 grid(nx = NULL, ny = NULL, col = "gray", lty = "dotted")
 ```
+
 
 ## Plot Analysis
 
@@ -395,7 +397,7 @@ In the analysis of the sunspot number series, we have opted not to use trend mod
 
 Through initial exploratory data analysis and visual inspection of the time series plot, it became evident that the sunspot numbers exhibit a strong seasonal pattern. The Autocorrelation Function (ACF) and Partial Autocorrelation Function (PACF) plots of the non-transformed data further confirmed the presence of seasonality, displaying a decaying wave pattern typical of seasonal data. In contrast, trend models primarily focus on capturing long-term trends and are not designed to account for seasonality effectively.
 
-The sunspot series, characterized by periodic fluctuations **approximately** every 11 years to be precise these cycle exist in the range of 9-14 years meaning there is a variability in this natural phenomenon which requires a model that can explicitly account for these varying cycles. Trend models do not provide mechanisms to capture such cyclical patterns, leading to inadequate representations and potentially misleading forecasts.
+The sunspot series, known for its periodic fluctuations corresponding to solar cycles, exhibits cycles **approximately** every 11 years, though this period can vary between 9 and 14 years. This variability in the natural phenomenon necessitates a model that can explicitly account for these changing cycles. Traditional trend models lack the capability to capture such cyclical patterns, resulting in inadequate representations and potentially misleading forecasts.
 
 The SARIMA model is specifically designed to handle time series data with both seasonal and non-seasonal components. It incorporates terms to address autoregressive behavior, moving averages, and differencing for both seasonal and non-seasonal parts of the series. This makes it a comprehensive and flexible approach for modeling the complex dynamics observed in the sunspot data. By using SARIMA, we can accurately capture the periodicity, autoregressive influences, and any random shocks present in the data.
 
@@ -408,7 +410,7 @@ To achieve this, we will employ a **residuals-based approach**. This method invo
 We will use tools such as Autocorrelation Function (ACF) and Partial Autocorrelation Function (PACF) plots to examine the residuals. Through this iterative process, we aim to select the most appropriate seasonal orders that provide the best fit for the data. This ensures that the final SARIMA model is robust and capable of accurately capturing the seasonal dynamics present in the time series.
 
 
-```{r fig.height=8, fig.width=25, fig.align='center'}
+```{r fig.height=6, fig.width=19, fig.align='center'}
 # Plot ACF and PACF plots BC_sunspot_TS
 BC_sunspot_TS %>% 
   plot_acf_pacf(acf_main = "Figure 8.1: Autocorrelation Function (ACF) of Transformed Sunspot Numbers",
@@ -416,7 +418,7 @@ BC_sunspot_TS %>%
                 max_lag = 60)
 ```
 
-The above ACF of the transformed sunspot series, show that most of the seasonal peaks occur at the 11 year in most cases with only the 4th and 5th seasonal lags showing 
+The above ACF (Figure 8.1) of the transformed sunspot series further confirms the data's periodicity, with the most significant lags predominantly occurring around the 11-year mark.
 
 ### Seasonal Differencing (D)
 
@@ -426,116 +428,761 @@ By setting the seasonal differencing component (D) to 1, we expect the residuals
 
 It is crucial to note that setting higher orders for the seasonal differencing parameter (D) can lead to data loss and may result in over-differencing. Over-differencing can distort the data and obscure meaningful patterns, making the time series analysis less reliable. Therefore, careful consideration is required when selecting the order of differencing to ensure that the seasonal effects are adequately removed without compromising the integrity of the data.
 
-```{r fig.height=13, fig.width=22, fig.align='center'}
+```{r fig.align='center', fig.height=7, fig.width=15, message=FALSE, warning=FALSE}
 # Checking residuals of seasonally differenced model - SARIMA(0,0,0)(0,1,0)[11]
-BC_sunspot_TS %>% check_residuals(order = c(0,0,0), 
-                                  seasonal_order = c(0,1,0),
-                                  period = 11,
-                                  acf_lag = 50,
-                                  pacf_lag = 50,
-                                  res_main = 'Figure 9.1: Residuals of seasonally differenced model SARIMA(0,0,0)(0,1,0)[11]',
-                                  hist_main = 'Figure 9.2: Histogram of residuals',
-                                  acf_main = 'Figure 9.3: ACF plot of residuals',
-                                  pacf_main = 'Figure 9.4: PACF plot of residuals')
+BC_sunspot_TS %>% 
+  check_residuals(order = c(0,0,0), 
+                  seasonal_order = c(0,1,0),
+                  period = 11,
+                  acf_lag = 50,
+                  pacf_lag = 50,
+                  res_main = 'Figure 9.1: Residuals of model: SARIMA(0,0,0)(0,1,0)[11]',
+                  hist_main = 'Figure 9.2: Histogram of residuals',
+                  qq_main = 'Figure 9.3: QQ-Plot of residuals',
+                  acf_main = 'Figure 9.4: ACF plot of residuals',
+                  pacf_main = 'Figure 9.5: PACF plot of residuals')
 ```
 
-We observe that seasonality in the series is significantly reduced, as evidenced by the residuals, which exhibit minimal signs of seasonality. However, it's important to note that not all seasonal components have been fully addressed. This is indicated by the Autocorrelation Function (ACF) and Partial Autocorrelation Function (PACF) plots, which show significant autocorrelation at the seasonal lags. To address this remaining seasonality, we need to determine the appropriate seasonal Autoregressive (AR) and Moving Average (MA) orders for the series.
+We observe that seasonality in the series is significantly reduced, as evidenced by the residuals, which exhibit minimal signs of seasonality. However, it's important to note that not all stochastic components have been fully addressed as evidenced by the time series plot (Figure 9.1) and Ljung-Box Plot. This is also indicated by the Autocorrelation Function (ACF) and Partial Autocorrelation Function (PACF) plots, which show significant autocorrelation at the seasonal lags. To address this remaining seasonality, we need to determine the appropriate seasonal Autoregressive (AR) and Moving Average (MA) orders for the series.
 
-From the ACF plot, we observe three significant seasonal lags at the first and second seasonal periods. Additionally, the fifth season exhibits a near-significant lag. Given this information, the potential orders for the seasonal MA component (QQ) are likely to be 2 or 3, incorporating the fifth lag.
+From the ACF plot, we observe three significant seasonal lags at the first and second seasonal periods. Given this information, the potential orders for the seasonal MA component (Q) is likely to be 2. The PACF plot suggests that the seasonal AR order (P) is likely to be 0 or 1. 
 
-The PACF plot suggests that the seasonal AR order (PP) is likely to be 0 or 1. This inference is based on the behavior of the PACF, which shows a rapid decay after the first lag.
+### Seasonal AR and MA orders
 
-### Seasonal Orders (P, Q)
-
-```{r fig.height=13, fig.width=22, fig.align='center'}
+```{r fig.align='center', fig.height=7, fig.width=15, message=FALSE, warning=FALSE}
 # Checking residuals of seasonally differenced model with P and Q orders - SARIMA(0,0,0)(1,1,2)[11]
 BC_sunspot_TS %>% check_residuals(order = c(0,0,0), 
                                   seasonal_order = c(1,1,2),
                                   period = 11,
                                   acf_lag = 50,
                                   pacf_lag = 50,
-                                  res_main = 'Figure 10.1: Residuals of seasonally differenced model SARIMA(0,0,0)(1,1,2)[11]',
+                                  res_main = 'Figure 10.1: Residuals of model: SARIMA(0,0,0)(1,1,2)[11]',
                                   hist_main = 'Figure 10.2: Histogram of residuals',
-                                  acf_main = 'Figure 10.3: ACF plot of residuals',
-                                  pacf_main = 'Figure 10.4: PACF plot of residuals')
+                                  qq_main = 'Figure 10.3: QQ-Plot of residuals',
+                                  acf_main = 'Figure 10.4: ACF plot of residuals',
+                                  pacf_main = 'Figure 10.5: PACF plot of residuals')
 ```
 
-We can observe from the ACF (Figure 10.3) and PACF plot (Figure 10.4) there are no more significant spikes at the seasonal lags. The residuals plot also shows significant reduction in the seasonality when compared to the original series. After experimenting with possible combinations of the P and Q derived from the previous section of the analysis. The SARIMA(0,0,0)(1,1,2)[11] model shows the best results in addressing the seasonal component underlying in the data. 
+We can observe from the ACF (Figure 10.4) and PACF plot (Figure 10.5) there are no more significant spikes at the seasonal lags. The residuals plot also shows significant reduction in the seasonality when compared to the original series. After experimenting with possible combinations of the P and Q derived from the previous section of the analysis. The SARIMA(0,0,0)(1,1,2)[11] model shows the best results in addressing the seasonal component underlying in the data. 
 
 **Given this information we, set the seasonal orders (P,D,Q) as (1,1,2)**
 
-### Ordinary Differencing (d)
+## Ordinary Differencing (d)
 
+From the above [section](#seasonal-ar-and-ma-orders), once we remove the predominant seasonal behaviour inherent in the data. We see that the series does show signs of a trend which is assessed using the ACF (Figure 10.4) and PACF (Figure 10.5) plots. The ACF plot shows a set of gradually decaying lags while the PACF show a significantly high first lag, both indications of a possible pattern carrying over in the residuals which is addressed through ordinary differencing below.
 
-```{r fig.height=13, fig.width=22, fig.align='center'}
-# Checking residuals of seasonally differenced model with P and Q orders - SARIMA(0,0,0)(1,1,2)[11]
-BC_sunspot_TS %>% check_residuals(order = c(0,1,0), 
-                                  seasonal_order = c(8,1,2),
-                                  period = 11,
-                                  acf_lag = 50,
-                                  pacf_lag = 50,
-                                  res_main = 'Figure 11.1: Residuals of seasonally differenced model SARIMA(0,1,0)(1,1,2)[11]',
-                                  hist_main = 'Figure 11.2: Histogram of residuals',
-                                  acf_main = 'Figure 11.3: ACF plot of residuals',
-                                  pacf_main = 'Figure 11.4: PACF plot of residuals')
+```{r fig.align='center', fig.height=7, fig.width=15, message=FALSE, warning=FALSE}
+# Checking residuals of seasonally differenced model with P and Q orders - SARIMA(0,1,0)(1,1,2)[11]
+BC_sunspot_TS %>% 
+  check_residuals(order = c(0,1,0), 
+                  seasonal_order = c(1,1,2),
+                  period = 11,
+                  acf_lag = 70,
+                  pacf_lag = 70,
+                  res_main = 'Figure 11.1: Residuals of model: SARIMA(0,1,0)(1,1,2)[11]',
+                  hist_main = 'Figure 11.2: Histogram of residuals',
+                  acf_main = 'Figure 11.3: ACF plot of residuals',
+                  pacf_main = 'Figure 11.4: PACF plot of residuals')
 ```
 
+After introducing ordinary differencing (d=1) we can see a significant improvement of the residuals. The time series plot (Figure 11.1) does not show any significant seasonal patterns and is well centered around the zero line. We can also see that the ACF no longer features a deacying pattern and the PACF no longer has a significant first lag. Additionally, we see can also observe some improvement in the Ljung box plot which was not observed earlier in any of the plots. 
+
+Two interesting insights:
+
+1. We can see in the histogram (Figure 11.2) that the standardized residuals do not conform to the expected -3 to 3 range, which likely indicates outliers in the residuals. From the initial [EDA Exploration section](#exploration) we can see that these residuals are resultant from the outliers seen in our series for the years 1778, 1957 and 1958.
+
+2. We can see a significant lag at appear at the first season after applying ordinary differencing, given that we have addressed the seasonality effectively with optimal seasonal order we assume that this shows up due to the trend of the series rather an indication of leftover seasonality. We expect the successive steps to give us more information on if this is a result of an underlying stochastic component other than seasonality.
+
+**In conclusion we will now proceed to find the ordinary Auto-Regressive (p) and Moving-Average (q) order with the above set orders which are as follows -> SARIMA(p,1,q)(1,1,2)[11]**
+
+**Note:** The residuals from this model (SARIMA(0,1,0)(1,1,2)[11]) will hereafter be referred to as **base residuals** in this report.
+
+## Determining Potential Models
+
+We will now conduct a thorough analysis to determine potential models to accurately forecast future sunspot numbers. To find the sets of possible we will use tools such as the ACF plot, PACF Plot, EACF Plot and the BIC Table. These test/tools will be applied over the base residuals we determined from the SARIMA(0,1,0)(1,1,2)[11] model.
+
+### ACF and PACF Analysis of residuals
+
+```{r fig.height=6, fig.width=19, fig.align='center'}
+# Store the residuals of the SARIMA(0,1,0)(1,1,2)[11] model
+base_residuals <- BC_sunspot_TS %>% 
+  Arima(order = c(0,1,0), 
+        seasonal = list(order=c(1,1,2), 
+                        period = 11)) %>% rstandard()
+
+# Plot ACF and PACF of the base residuals
+base_residuals %>% 
+  plot_acf_pacf(acf_main = 'Figure 12.1: ACF of SARIMA(0,1,0)(1,1,2)[11] residuals',
+                pacf_main = 'Figure 12.2: PACF of SARIMA(0,1,0)(1,1,2)[11] residuals')
+
+```
+From the analysis of the ACF plot (Figure 12.1) we can observe 7 significant lags and 9 significant lags from the PACF plot (Figure 12.2). 
+
+**Set of possible models:** 
+
+- SARIMA(9,1,7)(1,1,2)[11]
+
+### EACF Analysis
+
+```{r}
+# Plot EACF
+base_residuals %>% eacf(ar.max = 15, ma.max = 15)
+```
+
+In the EACF table, each cell represents a combination of AR and MA orders. The "**x**" symbol indicates that the corresponding combination of orders is not suitable for modeling the series, while the "**o**" symbol suggests that the combination may be viable.
+
+When interpreting the EACF table, attention is typically focused on patterns of "o" symbols. Successive "o" symbols near a particular cell suggest that the corresponding combination of AR and MA orders is supported by the data. Conversely, the presence of "x" symbols nearby indicates potential inadequacies in the corresponding model orders.
+
+In the provided EACF table, the "o" symbols suggest possible combinations of AR and MA orders that are worth considering for modeling the series. In this case, the top model orders identified as promising are 0 and 10, indicating that a model with zero AR terms and ten MA terms may be suitable. Additionally, neighboring cells with "o" symbols provide further options to explore for extending the set of possible models.
+
+**Set of possible models**: 
+
+- SARIMA(0,1,10)(1,1,2)[11] 
+
+- SARIMA(0,1,11)(1,1,2)[11]
+
+- SARIMA(1,1,11)(1,1,2)[11]
+
+### BIC Table
+
+```{r fig.align='center', fig.height=6, fig.width=10, message=FALSE, warning=FALSE}
+# Create BIC table
+bic_table <- base_residuals %>% armasubsets(nar =13, nma = 13, 
+                                            y.name = 'p', 
+                                            ar.method = 'ols')
+
+# Plot BIC Table without main title
+bic_table %>% plot()
+
+# Add main title separately
+title(main = 'Figure 13: BIC Table of possible model orders', adj = 0.5, line = 5.7)
+```
+
+The BIC Table (Figure 13) presents the outcomes of fitting various ARMA (AutoRegressive Moving Average) models to the time series data. It displays different combinations of AutoRegressive (AR) and Moving Average (MA) orders alongside their respective BIC values.
+
+The selection of `nar` and `nma` parameters profoundly influences the ARMA model's goodness-of-fit to the data. A balance must be struck: too few terms may lead to underfitting, missing crucial data patterns, while an excess of terms may cause overfitting, capturing noise instead of genuine patterns.
+
+In our analysis, based on the BIC Table (Figure 13), the "p-lag" column signifies the AR(p) orders, while the "error-lag" column represents the MA(q) orders. To avoid excessively large models, we capped `nar` and `nma` at 10, considering the highest orders estimated from the ACF, PACF, and EACF, which was 9 (EACF).
+
+Based on the BIC table, the optimal model indicates an order of p=9 and q=10. However, it is noteworthy that the AR(3) and AR(6) terms consistently appear in at least four of the top models. Similarly, the MA(2) and MA(5) terms also feature in at least four of the top models. This consistency suggests that these specific AR and MA terms may play a significant role in accurately capturing the underlying structure of the time series data.
+
+Hence, we have four potential AR orders: (3, 5, 6, 11) and four possible MA orders: (2, 5, 8, 10). 
+
+**Set of possible models (p, d, q)**: 
+
+- SARIMA(3,1,2)(1,1,2)[11]
+
+- SARIMA(3,1,5)(1,1,2)[11]
+
+- SARIMA(3,1,8)(1,1,2)[11]
+
+- SARIMA(3,1,10)(1,1,2)[11]
+
+- SARIMA(5,1,2)(1,1,2)[11]
+
+- SARIMA(5,1,5)(1,1,2)[11]
+
+- SARIMA(5,1,8)(1,1,2)[11]
+
+- SARIMA(5,1,10)(1,1,2)[11]
+
+- SARIMA(6,1,2)(1,1,2)[11]
+
+- SARIMA(6,1,5)(1,1,2)[11]
+
+- SARIMA(6,1,8)(1,1,2)[11]
+
+- SARIMA(6,1,10)(1,1,2)[11]
+
+- SARIMA(11,1,2)(1,1,2)[11]
+
+- SARIMA(11,1,5)(1,1,2)[11]
+
+- SARIMA(11,1,8)(1,1,2)[11]
+
+- SARIMA(11,1,10)(1,1,2)[11]
+
+## Set of possible model SARIMA(p,d,q)(P,D,Q)[s]
+
+Based on the comprehensive analysis conducted in the [model specification](#model-specification) section, we have identified a set of 20 possible models. These models, along with their corresponding ARIMA specifications, are as follows:
+
+- SARIMA(9,1,7)(1,1,2)[11]
+
+- SARIMA(0,1,10)(1,1,2)[11] 
+
+- SARIMA(0,1,11)(1,1,2)[11]
+
+- SARIMA(1,1,11)(1,1,2)[11]
+
+- SARIMA(3,1,2)(1,1,2)[11]
+
+- SARIMA(3,1,5)(1,1,2)[11]
+
+- SARIMA(3,1,8)(1,1,2)[11]
+
+- SARIMA(3,1,10)(1,1,2)[11]
+
+- SARIMA(5,1,2)(1,1,2)[11]
+
+- SARIMA(5,1,5)(1,1,2)[11]
+
+- SARIMA(5,1,8)(1,1,2)[11]
+
+- SARIMA(5,1,10)(1,1,2)[11]
+
+- SARIMA(6,1,2)(1,1,2)[11]
+
+- SARIMA(6,1,5)(1,1,2)[11]
+
+- SARIMA(6,1,8)(1,1,2)[11]
+
+- SARIMA(6,1,10)(1,1,2)[11]
+
+- SARIMA(11,1,2)(1,1,2)[11]
+
+- SARIMA(11,1,5)(1,1,2)[11]
+
+- SARIMA(11,1,8)(1,1,2)[11]
+
+- SARIMA(11,1,10)(1,1,2)[11]
+
+# **Parameter Estimation**
+
+This section evaluates 11 candidate models to assess the significance of their coefficients. We anticipate the most suitable model to exhibit consistently significant coefficients. Three parameter estimation methods are employed: Least Squares (CSS), Maximum Likelihood (ML), and a combined approach (CSS-ML).
+
+The analysis leverages functions within the utilities.R script. Refer to the [Appendix](#appendix) for details on these functions and their implementation.
+
+## Model 1: SARIMA(9,1,7)(1,1,2)[11]
+
+```{r fig.align='center', fig.height=7, fig.width=15, message=FALSE, warning=FALSE}
+model_917 <- BC_sunspot_TS %>% arima_summary(pdq_order = c(9,1,7),
+                                             seasonal_order = c(1,1,2),
+                                             period = 11)
+
+BC_sunspot_TS %>% 
+  check_residuals(order = c(9,1,7), 
+                  seasonal_order = c(1,1,2),
+                  period = 11,
+                  acf_lag = 70,
+                  pacf_lag = 70,
+                  res_main = 'Figure 14.1: Residuals of model: SARIMA(9,1,7)(1,1,2)[11]',
+                  hist_main = 'Figure 14.2: Histogram of residuals',
+                  acf_main = 'Figure 14.3: ACF plot of residuals',
+                  pacf_main = 'Figure 14.4: PACF plot of residuals')
+```
+
+The SARIMA(9,1,7)(1,1,2)[11] model was inferred from the ACF and PACF plots. The parameter estimation was conducted using three methods: CSS, ML, and CSS-ML. In the CSS and ML methods, several parameters showed NaN values, indicating issues with parameter estimation. However, the CSS-ML method provided complete parameter estimates, with most parameters being significant. Notably, higher-order AR and MA terms were significant, suggesting their necessity to capture the underlying series dynamics.
+
+The residuals analysis showed a near-normal distribution, with a histogram indicating one outlier and a QQ-Plot confirming the near-normality of residuals. The ACF and PACF plots revealed one significant lag near the 5th season, but the Ljung-Box test results indicated that the residuals follow a white noise pattern. This suggests the model adequately captures the data's underlying patterns. Despite the presence of some `NaN` values in individual methods, the overall model, particularly through the CSS-ML method, is robust, with significant higher-order terms and residuals behaving as expected.
+
+## Model 2: SARIMA(0,1,10)(1,1,2)[11] 
+
+```{r fig.align='center', fig.height=7, fig.width=15, message=FALSE, warning=FALSE}
+model_0110 <- BC_sunspot_TS %>% arima_summary(pdq_order = c(0,1,10),
+                                             seasonal_order = c(1,1,2),
+                                             period = 11)
+
+BC_sunspot_TS %>% 
+  check_residuals(order = c(0,1,10), 
+                  seasonal_order = c(1,1,2),
+                  period = 11,
+                  acf_lag = 70,
+                  pacf_lag = 70,
+                  res_main = 'Figure 15.1: Residuals of model: SARIMA(0,1,10)(1,1,2)[11]',
+                  hist_main = 'Figure 15.2: Histogram of residuals',
+                  acf_main = 'Figure 15.3: ACF plot of residuals',
+                  pacf_main = 'Figure 15.4: PACF plot of residuals')
+```
+
+In the SARIMA(0,1,10)(1,1,2)[11] model, the majority of the parameters are highly significant. Similar to the previous model, the insignificant parameters tend to be lower-order MA terms, which is consistent across all three estimation methods (CSS, ML, and CSS-ML).
+
+The residual diagnostics plots show a near-normal distribution of the standardized residuals, with a persistent outlier. While the ACF and PACF plots indicate some slightly significant lags, the Ljung-Box test results show all p-values above the conventional 0.05 threshold, indicating that the residuals follow a white noise pattern. This suggests the model adequately captures the underlying data patterns.
+
+## Model 3: SARIMA(0,1,11)(1,1,2)[11]
+
+```{r fig.align='center', fig.height=7, fig.width=15, message=FALSE, warning=FALSE}
+model_0111 <- BC_sunspot_TS %>% arima_summary(pdq_order = c(0,1,11),
+                                             seasonal_order = c(1,1,2),
+                                             period = 11)
+
+BC_sunspot_TS %>% 
+  check_residuals(order = c(0,1,11), 
+                  seasonal_order = c(1,1,2),
+                  period = 11,
+                  acf_lag = 70,
+                  pacf_lag = 70,
+                  res_main = 'Figure 16.1: Residuals of model: SARIMA(0,1,11)(1,1,2)[11]',
+                  hist_main = 'Figure 16.2: Histogram of residuals',
+                  acf_main = 'Figure 16.3: ACF plot of residuals',
+                  pacf_main = 'Figure 16.4: PACF plot of residuals')
+```
+
+In the SARIMA(0,1,11)(1,1,2)[11] model, across all three estimation methods (CSS, ML, and CSS-ML), the ma7 and ma8 terms are consistently insignificant, whereas all other MA terms, including higher-order terms like ma9, ma10, and ma11, are highly significant. The ACF and PACF plots show minimal significant lags, which can be neglected as the Ljung-Box test confirms that the series follows a white noise pattern at all lags, with p-values above the conventional 0.05 threshold.
+
+The residuals' normality is not perfect, likely due to the outlier observed in the data. This is further supported by the Shapiro-Wilk test, which fails to accept the normality of the standardized residuals.
+
+## Model 4: SARIMA(1,1,11)(1,1,2)[11]
+
+```{r fig.align='center', fig.height=7, fig.width=15, message=FALSE, warning=FALSE}
+model_1111 <- BC_sunspot_TS %>% arima_summary(pdq_order = c(1,1,11),
+                                             seasonal_order = c(1,1,2),
+                                             period = 11)
+
+BC_sunspot_TS %>% 
+  check_residuals(order = c(1,1,11), 
+                  seasonal_order = c(1,1,2),
+                  period = 11,
+                  acf_lag = 70,
+                  pacf_lag = 70,
+                  res_main = 'Figure 17.1: Residuals of model: SARIMA(1,1,11)(1,1,2)[11]',
+                  hist_main = 'Figure 17.2: Histogram of residuals',
+                  acf_main = 'Figure 17.3: ACF plot of residuals',
+                  pacf_main = 'Figure 17.4: PACF plot of residuals')
+```
+
+Similar to the previous models, the SARIMA(1,1,11)(1,1,2)[11] model shows highly significant higher-order parameters. This model also does not exhibit normal behavior in the residuals. Only one significant lag is observed in the ACF and PACF plots, which is neglected as it does not indicate significant correlation, as confirmed by the Ljung-Box test.
+
+## Model 5: SARIMA(3,1,2)(1,1,2)[11]
+
+```{r fig.align='center', fig.height=7, fig.width=15, message=FALSE, warning=FALSE}
+model_312 <- BC_sunspot_TS %>% arima_summary(pdq_order = c(3,1,2),
+                                             seasonal_order = c(1,1,2),
+                                             period = 11)
+
+BC_sunspot_TS %>% 
+  check_residuals(order = c(3,1,2), 
+                  seasonal_order = c(1,1,2),
+                  period = 11,
+                  acf_lag = 70,
+                  pacf_lag = 70,
+                  res_main = 'Figure 18.1: Residuals of model: SARIMA(3,1,2)(1,1,2)[11]',
+                  hist_main = 'Figure 18.2: Histogram of residuals',
+                  acf_main = 'Figure 18.3: ACF plot of residuals',
+                  pacf_main = 'Figure 18.4: PACF plot of residuals')
+```
+
+The SARIMA(3,1,2)(1,1,2)[11] model is comparatively smaller than its predecessors. Visual assessment of the histogram and QQ plot shows some signs of normality, but this is not supported by the Shapiro-Wilk test. The ACF and PACF plots reveal many significant lags, which cannot be neglected, as the Ljung-Box test indicates a significant number of lags fall below the conventional 0.05 value. This suggests that there is autocorrelation left in the residuals that the model fails to capture.
+
+## Model 6: SARIMA(3,1,5)(1,1,2)[11]
+
+```{r fig.align='center', fig.height=7, fig.width=15, message=FALSE, warning=FALSE}
+model_315 <- BC_sunspot_TS %>% arima_summary(pdq_order = c(3,1,5),
+                                             seasonal_order = c(1,1,2),
+                                             period = 11)
+
+BC_sunspot_TS %>% 
+  check_residuals(order = c(3,1,5), 
+                  seasonal_order = c(1,1,2),
+                  period = 11,
+                  acf_lag = 70,
+                  pacf_lag = 70,
+                  res_main = 'Figure 19.1: Residuals of model: SARIMA(3,1,5)(1,1,2)[11]',
+                  hist_main = 'Figure 19.2: Histogram of residuals',
+                  acf_main = 'Figure 19.3: ACF plot of residuals',
+                  pacf_main = 'Figure 19.4: PACF plot of residuals')
+```
+
+The SARIMA(3,1,5)(1,1,2)[11] model has very few significant parameters. Additionally, the ACF and PACF plots reveal multiple significant lags. The Ljung-Box test confirms that these lags indicate signs of autocorrelation due to their low p-values, suggesting that the model does not adequately capture all patterns in the data. Furthermore, the residuals do not exhibit normality, as supported by both visual assessments and formal tests. This indicates that the model may not be the best fit for the series, as it leaves behind significant autocorrelation and fails to produce normally distributed residuals.
+
+## Model 7: SARIMA(3,1,8)(1,1,2)[11]
+
+```{r fig.align='center', fig.height=7, fig.width=15, message=FALSE, warning=FALSE}
+model_318 <- BC_sunspot_TS %>% arima_summary(pdq_order = c(3,1,8),
+                                             seasonal_order = c(1,1,2),
+                                             period = 11)
+
+BC_sunspot_TS %>% 
+  check_residuals(order = c(3,1,8), 
+                  seasonal_order = c(1,1,2),
+                  period = 11,
+                  acf_lag = 70,
+                  pacf_lag = 70,
+                  res_main = 'Figure 20.1: Residuals of model: SARIMA(3,1,8)(1,1,2)[11]',
+                  hist_main = 'Figure 20.2: Histogram of residuals',
+                  acf_main = 'Figure 20.3: ACF plot of residuals',
+                  pacf_main = 'Figure 20.4: PACF plot of residuals')
+```
+
+The SARIMA(3,1,8)(1,1,2)[11] model demonstrates a regression in normality, as indicated by both visual assessments and formal tests. The histogram and QQ plot suggest deviations from normality, which is confirmed by the Shapiro-Wilk test. Additionally, the Ljung-Box test results show several lags with p-values falling below the 0.05 threshold, indicating the presence of autocorrelation that the model fails to capture. Despite these issues, the model does have almost all significant parameters, suggesting that it is able to capture some of the underlying patterns in the series. However, the remaining autocorrelation and non-normal residuals suggest that the model might not be fully adequate in capturing the complexities of the data.
+
+## Model 8: SARIMA(3,1,10)(1,1,2)[11]
+
+```{r fig.align='center', fig.height=7, fig.width=15, message=FALSE, warning=FALSE}
+model_3110 <- BC_sunspot_TS %>% arima_summary(pdq_order = c(3,1,10),
+                                             seasonal_order = c(1,1,2),
+                                             period = 11)
+
+BC_sunspot_TS %>% 
+  check_residuals(order = c(3,1,10), 
+                  seasonal_order = c(1,1,2),
+                  period = 11,
+                  acf_lag = 70,
+                  pacf_lag = 70,
+                  res_main = 'Figure 21.1: Residuals of model: SARIMA(3,1,10)(1,1,2)[11]',
+                  hist_main = 'Figure 21.2: Histogram of residuals',
+                  acf_main = 'Figure 21.3: ACF plot of residuals',
+                  pacf_main = 'Figure 21.4: PACF plot of residuals')
+```
+
+The SARIMA(3,1,10)(1,1,2)[11] model exhibits a notable improvement in the normality of residuals, although it still falls slightly below the conventional threshold in the Shapiro-Wilk test. Visual assessments, including the histogram and QQ plot, indicate closer adherence to normality. The ACF and PACF plots reveal only two near-significant lags, which can be reasonably neglected. The Ljung-Box test confirms that there is minimal autocorrelation left uncaptured by the model.
+
+This model demonstrates that higher-order terms are highly significant in effectively capturing the series' behavior. The improved normality of residuals and the reduction in significant autocorrelation suggest that the SARIMA(3,1,10)(1,1,2)[11] model is more adept at fitting the data compared to previous models, despite minor deviations in normality.
+
+## Model 9: SARIMA(5,1,2)(1,1,2)[11]
+
+```{r fig.align='center', fig.height=7, fig.width=15, message=FALSE, warning=FALSE}
+model_512 <- BC_sunspot_TS %>% arima_summary(pdq_order = c(5,1,2),
+                                             seasonal_order = c(1,1,2),
+                                             period = 11)
+
+BC_sunspot_TS %>% 
+  check_residuals(order = c(5,1,2), 
+                  seasonal_order = c(1,1,2),
+                  period = 11,
+                  acf_lag = 70,
+                  pacf_lag = 70,
+                  res_main = 'Figure 22.1: Residuals of model: SARIMA(5,1,2)(1,1,2)[11]',
+                  hist_main = 'Figure 22.2: Histogram of residuals',
+                  acf_main = 'Figure 22.3: ACF plot of residuals',
+                  pacf_main = 'Figure 22.4: PACF plot of residuals')
+```
+
+The SARIMA(5,1,2)(1,1,2)[11] model, similar to its predecessor, demonstrates high significance in higher-order AR and MA terms. The model exhibits improved normality of residuals, as indicated by the Shapiro-Wilk test. However, despite this improvement, the ACF and PACF plots reveal a few significant lags. Notably, two of these lags fall below the conventional 0.05 threshold in the Ljung-Box test, indicating the presence of residual autocorrelation.
+
+This suggests that while the SARIMA(5,1,2)(1,1,2)[11] model effectively captures much of the series' behavior, there are still some aspects that it might be overlooking. The significant lags in the ACF and PACF plots, combined with the Ljung-Box test results, imply that the model may not fully account for all underlying patterns in the data. Despite these minor shortcomings, the overall performance of the model, particularly in terms of normality and significance of parameters, marks a improvement over previous models.
+
+## Model 10: SARIMA(5,1,5)(1,1,2)[11]
+
+```{r fig.align='center', fig.height=7, fig.width=15, message=FALSE, warning=FALSE}
+model_515 <- BC_sunspot_TS %>% arima_summary(pdq_order = c(5,1,5),
+                                             seasonal_order = c(1,1,2),
+                                             period = 11)
+
+BC_sunspot_TS %>% 
+  check_residuals(order = c(5,1,5), 
+                  seasonal_order = c(1,1,2),
+                  period = 11,
+                  acf_lag = 70,
+                  pacf_lag = 70,
+                  res_main = 'Figure 23.1: Residuals of model: SARIMA(5,1,5)(1,1,2)[11]',
+                  hist_main = 'Figure 23.2: Histogram of residuals',
+                  acf_main = 'Figure 23.3: ACF plot of residuals',
+                  pacf_main = 'Figure 23.4: PACF plot of residuals')
+```
+
+The SARIMA(5,1,5)(1,1,2)[11] model demonstrates significant improvement across multiple fronts, including parameter significance and residual diagnostics. Almost all terms are significant, with only the lowest AR order and the lowest SMA order showing insignificance. Both visual assessments (histogram and QQ plot) and formal tests indicate a close alignment to normality, although the residuals are not perfectly normal, as the Shapiro-Wilk p-value remains slightly below the conventional 0.05 threshold.
+
+The ACF and PACF plots reveal minimal significant lags, which can be considered negligible. The Ljung-Box test supports this, as all lags have p-values above the 0.05 threshold, indicating that the model captures the autocorrelation structure well.
+
+In summary, the SARIMA(5,1,5)(1,1,2)[11] model effectively captures the series' behavior, with high parameter significance and residuals that closely approximate normality. The minimal significant lags in the ACF and PACF plots, corroborated by the Ljung-Box test, suggest that the model leaves little autocorrelation unaccounted for, marking a substantial improvement over previous models.
 
 
+## Model 11: SARIMA(6,1,2)(1,1,2)[11]
+
+```{r fig.align='center', fig.height=7, fig.width=15, message=FALSE, warning=FALSE}
+model_612<- BC_sunspot_TS %>% arima_summary(pdq_order = c(6,1,2),
+                                             seasonal_order = c(1,1,2),
+                                             period = 11)
+
+BC_sunspot_TS %>% 
+  check_residuals(order = c(6,1,2), 
+                  seasonal_order = c(1,1,2),
+                  period = 11,
+                  acf_lag = 70,
+                  pacf_lag = 70,
+                  res_main = 'Figure 24.1: Residuals of model: SARIMA(6,1,2)(1,1,2)[11]',
+                  hist_main = 'Figure 24.2: Histogram of residuals',
+                  acf_main = 'Figure 24.3: ACF plot of residuals',
+                  pacf_main = 'Figure 24.4: PACF plot of residuals')
+```
+
+The SARIMA(6,1,2)(1,1,2)[11] model displays several significant parameters, indicating that it captures some key aspects of the series. However, the residual diagnostics reveal shortcomings. The Ljung-Box test results indicate a significant number of lags with p-values falling below the conventional threshold of 0.05. This suggests that the model fails to fully account for all autocorrelation in the data, leaving some underlying patterns uncaptured. Despite the significance of individual parameters, the presence of these significant lags points to residual autocorrelation, indicating that the model may not be entirely adequate in capturing the series' dynamics.
+
+## Model 12: SARIMA(6,1,5)(1,1,2)[11]
+
+```{r fig.align='center', fig.height=7, fig.width=15, message=FALSE, warning=FALSE}
+model_615 <- BC_sunspot_TS %>% arima_summary(pdq_order = c(6,1,5),
+                                             seasonal_order = c(1,1,2),
+                                             period = 11)
+
+BC_sunspot_TS %>% 
+  check_residuals(order = c(6,1,5), 
+                  seasonal_order = c(1,1,2),
+                  period = 11,
+                  acf_lag = 70,
+                  pacf_lag = 70,
+                  res_main = 'Figure 25.1: Residuals of model: SARIMA(6,1,5)(1,1,2)[11]',
+                  hist_main = 'Figure 25.2: Histogram of residuals',
+                  acf_main = 'Figure 25.3: ACF plot of residuals',
+                  pacf_main = 'Figure 25.4: PACF plot of residuals')
+```
+
+Compared to other models, the SARIMA(6,1,5)(1,1,2)[11] model has a reduced number of significant parameters. Despite this, it effectively captures almost all autocorrelation in the series, as evidenced by the Ljung-Box test, where nearly all lags have high p-values, indicating minimal residual autocorrelation. Additionally, the residuals exhibit some normality, supported by both visual assessments (histogram and QQ plot) and the Shapiro-Wilk test. This suggests that the model, while having fewer significant parameters, manages to adequately capture the underlying patterns in the data, ensuring that residuals are close to normal and free from significant autocorrelation.
+
+## Model 13: SARIMA(6,1,8)(1,1,2)[11]
+
+```{r fig.align='center', fig.height=7, fig.width=15, message=FALSE, warning=FALSE}
+model_618 <- BC_sunspot_TS %>% arima_summary(pdq_order = c(6,1,8),
+                                             seasonal_order = c(1,1,2),
+                                             period = 11)
+
+BC_sunspot_TS %>% 
+  check_residuals(order = c(6,1,8), 
+                  seasonal_order = c(1,1,2),
+                  period = 11,
+                  acf_lag = 70,
+                  pacf_lag = 70,
+                  res_main = 'Figure 26.1: Residuals of model: SARIMA(6,1,8)(1,1,2)[11]',
+                  hist_main = 'Figure 26.2: Histogram of residuals',
+                  acf_main = 'Figure 26.3: ACF plot of residuals',
+                  pacf_main = 'Figure 26.4: PACF plot of residuals')
+```
+
+At this stage of the analysis, the SARIMA(6,1,8)(1,1,2)[11] model demonstrates the best performance in terms of residual diagnostics. This model shows the highest normality of residuals, as indicated by visual assessments and the Shapiro-Wilk test. Only one significant lag appears in the ACF and PACF plots, which can be considered negligible. The Ljung-Box test supports this, with almost all p-values around 1.0, indicating that virtually no autocorrelation remains uncaptured. Thus, this model provides a promising fit, effectively capturing the underlying patterns in the series and ensuring minimal residual autocorrelation.
+
+## Model 14: SARIMA(6,1,10)(1,1,2)[11]
+
+```{r fig.align='center', fig.height=7, fig.width=15, message=FALSE, warning=FALSE}
+model_6110 <- BC_sunspot_TS %>% arima_summary(pdq_order = c(6,1,10),
+                                             seasonal_order = c(1,1,2),
+                                             period = 11)
+
+BC_sunspot_TS %>% 
+  check_residuals(order = c(6,1,10), 
+                  seasonal_order = c(1,1,2),
+                  period = 11,
+                  acf_lag = 70,
+                  pacf_lag = 70,
+                  res_main = 'Figure 27.1: Residuals of model: SARIMA(6,1,10)(1,1,2)[11]',
+                  hist_main = 'Figure 27.2: Histogram of residuals',
+                  acf_main = 'Figure 27.3: ACF plot of residuals',
+                  pacf_main = 'Figure 27.4: PACF plot of residuals')
+```
+
+The SARIMA(6,1,10)(1,1,2)[11] model is one of the largest models fitted in the parameter estimation section of this report, featuring a total of 19 parameters. Of these, 12 parameters are significant. Interestingly, some of the significant terms are lower-order MA terms, while the higher-order terms remain insignificant.
+
+In terms of residual normality, this model approximates a normal distribution quite closely, as suggested by the p-value from the Shapiro-Wilk test. The residual diagnostics further reinforce the model's adequacy, with the Ljung-Box test indicating almost no autocorrelation, as nearly all lags have high p-values. This suggests that the model effectively captures the series' underlying patterns, ensuring minimal residual autocorrelation and a distribution of residuals that closely aligns with normality.
+
+## Model 15: SARIMA(11,1,2)(1,1,2)[11]
+
+```{r fig.align='center', fig.height=7, fig.width=15, message=FALSE, warning=FALSE}
+model_1112 <- BC_sunspot_TS %>% arima_summary(pdq_order = c(11,1,2),
+                                             seasonal_order = c(1,1,2),
+                                             period = 11)
+
+BC_sunspot_TS %>% 
+  check_residuals(order = c(11,1,2), 
+                  seasonal_order = c(1,1,2),
+                  period = 11,
+                  acf_lag = 70,
+                  pacf_lag = 70,
+                  res_main = 'Figure 28.1: Residuals of model: SARIMA(11,1,2)(1,1,2)[11]',
+                  hist_main = 'Figure 28.2: Histogram of residuals',
+                  acf_main = 'Figure 28.3: ACF plot of residuals',
+                  pacf_main = 'Figure 28.4: PACF plot of residuals')
+```
+
+The SARIMA(11,1,2)(1,1,2)[11] model, like its predecessor, demonstrates a near close alignment to normality and captures almost all autocorrelation. Almost all ordinary AR and MA terms are significant, indicating their importance in modeling the series. However, the seasonal AR and MA terms are found to be insignificant. Despite this, the model effectively captures the underlying patterns in the data, with residual diagnostics showing minimal autocorrelation and a near-normal distribution, as evidenced by the Shapiro-Wilk test and the Ljung-Box test results. This suggests that while the seasonal terms may not be significant, the model still provides a robust fit to the series.
+
+# **Model Selection**
+
+This segment will delve into comparing the AIC and BIC scores of the models. In comparing the AIC (Akaike Information Criterion) and BIC (Bayesian Information Criterion) scores of the models, we aim to discern the most suitable model for our dataset. Both criteria provide valuable insights into model selection, but they differ slightly in their approach.
+
+Error measure scores provide a quantitative assessment of how well a model fits the data by evaluating the discrepancies between the observed values and the model's predictions. 
+
+## AIC and BIC Scores
+
+This section will look into analysis the AIC and BIC scores of the set of possible models. While AIC tends to select more complex models when sample sizes are large, BIC tends to favor simpler models. Therefore, comparing both AIC and BIC scores provides a comprehensive perspective on model performance, allowing us to strike a balance between goodness-of-fit and model simplicity.
+
+```{r paged.print=FALSE}
+# AIC Scores
+sort.score(AIC(model_917[["model_917_cssml"]], model_0110[["model_0110_cssml"]],
+               model_0111[["model_0111_cssml"]], model_1111[["model_1111_cssml"]],
+               model_1112[["model_1112_cssml"]], model_312[["model_312_cssml"]],
+               model_315[["model_315_cssml"]], model_318[["model_318_cssml"]],
+               model_3110[["model_3110_cssml"]], model_512[["model_512_cssml"]],
+               model_515[["model_515_cssml"]], model_612[["model_612_cssml"]],
+               model_615[["model_615_cssml"]], model_618[["model_618_cssml"]],
+               model_6110[["model_6110_cssml"]]), score='aic')
+
+```
+
+```{r paged.print=FALSE}
+# BIC Scores
+sort.score(BIC(model_917[["model_917_cssml"]], model_0110[["model_0110_cssml"]],
+               model_0111[["model_0111_cssml"]], model_1111[["model_1111_cssml"]],
+               model_1112[["model_1112_cssml"]], model_312[["model_312_cssml"]],
+               model_315[["model_315_cssml"]], model_318[["model_318_cssml"]],
+               model_3110[["model_3110_cssml"]], model_512[["model_512_cssml"]],
+               model_515[["model_515_cssml"]], model_612[["model_612_cssml"]],
+               model_615[["model_615_cssml"]], model_618[["model_618_cssml"]],
+               model_6110[["model_6110_cssml"]]), score='bic')
+
+```
+
+Based on the analysis of AIC and BIC scores, the ARIMA(5,1,5) model emerges as a potentially suitable choice for explaining the time series data. It achieves the third highest BIC score and ranks seventh highest in terms of AIC score among the considered models. Notably, the ARIMA(6,1,8) model also shows promise, securing the highest AIC score within the model set. 
+
+However, it ranks fifth in terms of BIC score, likely due to the BIC's stricter penalty for models with larger parameters. Despite this, the ARIMA(6,1,8) model still ranks among the top five models. It is also important to note that the actual BIC score of the ARIMA(6,1,8) model falls short of the other preceding top scores by a small margin. 
+
+Therefore, both the ARIMA(5,1,5) and ARIMA(6,1,8) models are considered likely optimal choices based on the AIC scores and the observed AR behavior in the series.
+
+## Error measure table
+
+In this section, we will compare the error measures of the models. The selected measures include:
+
+1. ME (Mean Error)
+2. RMSE (Root Mean Squared Error)
+3. MAE (Mean Absolute Error)
+4. MPE (Mean Percentage Error)
+5. MAPE (Mean Absolute Percentage Error)
+6. MASE (Mean Absolute Scaled Error)
+
+These error measures provide valuable insights into each model's performance, aiding in informed decisions regarding their suitability for our dataset. However, it's important to note that while error measures offer a glimpse into the accuracy of model predictions, they may not always be the best indicators of overall model performance. 
+
+Unlike AIC and BIC scores, which consider both model goodness-of-fit and complexity, error measures solely focus on the discrepancy between observed and predicted values. Consequently, a higher-order model with larger parameter values might yield lower error scores by fitting closely to the data. Yet, such models run the risk of overfitting due to their complexity, potentially compromising their generalization ability on unseen data. Thus, while error measures are valuable, they should be interpreted alongside other metrics like AIC and BIC to ensure a comprehensive evaluation of model performance.
+
+```{r paged.print=FALSE}
+# Compute accuracy measures for each SARIMA model
+Smodel_917_css <- accuracy(model_917[["model_917_cssml"]])[1:7]
+Smodel_0110_css <- accuracy(model_0110[["model_0110_cssml"]])[1:7]
+Smodel_0111_css <- accuracy(model_0111[["model_0111_cssml"]])[1:7]
+Smodel_1111_css <- accuracy(model_1111[["model_1111_cssml"]])[1:7]
+Smodel_1112_css <- accuracy(model_1112[["model_1112_cssml"]])[1:7]
+Smodel_312_css <- accuracy(model_312[["model_312_cssml"]])[1:7]
+Smodel_315_css <- accuracy(model_315[["model_315_cssml"]])[1:7]
+Smodel_318_css <- accuracy(model_318[["model_318_cssml"]])[1:7]
+Smodel_3110_css <- accuracy(model_3110[["model_3110_cssml"]])[1:7]
+Smodel_512_css <- accuracy(model_512[["model_512_cssml"]])[1:7]
+Smodel_515_css <- accuracy(model_515[["model_515_cssml"]])[1:7]
+Smodel_612_css <- accuracy(model_612[["model_612_cssml"]])[1:7]
+Smodel_615_css <- accuracy(model_615[["model_615_cssml"]])[1:7]
+Smodel_618_css <- accuracy(model_618[["model_618_cssml"]])[1:7]
+Smodel_6110_css <- accuracy(model_6110[["model_6110_cssml"]])[1:7]
+
+# Combine accuracy measures into a dataframe
+df.Smodels <- rbind(Smodel_917_css, Smodel_0110_css, Smodel_0111_css,
+                    Smodel_1111_css, Smodel_1112_css, Smodel_312_css,
+                    Smodel_315_css, Smodel_318_css, Smodel_3110_css,
+                    Smodel_512_css, Smodel_515_css, Smodel_612_css,
+                    Smodel_615_css, Smodel_618_css, Smodel_6110_css) %>% data.frame()
+
+# Assign column names to the dataframe
+colnames(df.Smodels) <- c("ME", "RMSE", "MAE", "MPE", "MAPE",
+                          "MASE", "ACF1")
+
+# Assign row names indicating the SARIMA order of each model
+rownames(df.Smodels) <- c("SARIMA(9,1,7)(1,1,2)[11]", "SARIMA(0,1,10)(1,1,2)[11]",
+                          "SARIMA(0,1,11)(1,1,2)[11]", "SARIMA(1,1,11)(1,1,2)[11]",
+                          "SARIMA(11,1,2)(1,1,2)[11]", "SARIMA(3,1,2)(1,1,2)[11]",
+                          "SARIMA(3,1,5)(1,1,2)[11]", "SARIMA(3,1,8)(1,1,2)[11]",
+                          "SARIMA(3,1,10)(1,1,2)[11]", "SARIMA(5,1,2)(1,1,2)[11]",
+                          "SARIMA(5,1,5)(1,1,2)[11]", "SARIMA(6,1,2)(1,1,2)[11]",
+                          "SARIMA(6,1,5)(1,1,2)[11]", "SARIMA(6,1,8)(1,1,2)[11]",
+                          "SARIMA(6,1,10)(1,1,2)[11]")
+
+# Round the values in the dataframe to five decimal places
+round(df.Smodels,  digits = 5)
+```
+
+The error measure table above reveals that the SARIMA(6,1,10)(1,1,2)[11] model consistently achieves top scores, indicating the lowest errors, across several metrics. Specifically, it outperforms other models in terms of RMSE, MAE, MPE, MASE, however given that the model is considerably bigger we do expect to see this behaviour. 
+
+The second best model comes out to be SARIMA(6,1,8)(1,1,2)[11] which follows the SARIMA(6,1,10)(1,1,2)[11] very closely bagging second least scores across the error metrics. The SARIMA(6,1,8)(1,1,2)[11] model also comes up as the top model in the AIC scores and fifth best in the BIC table. It is also important to note that even though BIC favors smaller models the SARIMA(6,1,8)(1,1,2)[11] comes in fifth with very marginal difference in the scores compared to smaller models.
+
+**Optimal Model: SARIMA(6,1,8)(1,1,2)[11]**
+
+## Neighbouring models
+
+```{r fig.align='center', fig.height=7, fig.width=15, message=FALSE, warning=FALSE}
+model_718 <- BC_sunspot_TS %>% arima_summary(pdq_order = c(7,1,8),
+                                             seasonal_order = c(1,1,2),
+                                             period = 11)
+
+BC_sunspot_TS %>% 
+  check_residuals(order = c(7,1,8), 
+                  seasonal_order = c(1,1,2),
+                  period = 11,
+                  acf_lag = 70,
+                  pacf_lag = 70,
+                  res_main = 'Figure 29.1: Residuals of model: SARIMA(7,1,8)(1,1,2)[11]',
+                  hist_main = 'Figure 29.2: Histogram of residuals',
+                  acf_main = 'Figure 29.3: ACF plot of residuals',
+                  pacf_main = 'Figure 29.4: PACF plot of residuals')
+```
+
+```{r fig.align='center', fig.height=7, fig.width=15, message=FALSE, warning=FALSE}
+model_619 <- BC_sunspot_TS %>% arima_summary(pdq_order = c(6,1,9),
+                                             seasonal_order = c(1,1,2),
+                                             period = 11)
+
+BC_sunspot_TS %>% 
+  check_residuals(order = c(6,1,9), 
+                  seasonal_order = c(1,1,2),
+                  period = 11,
+                  acf_lag = 70,
+                  pacf_lag = 70,
+                  res_main = 'Figure 30.1: Residuals of model: SARIMA(6,1,9)(1,1,2)[11]',
+                  hist_main = 'Figure 30.2: Histogram of residuals',
+                  acf_main = 'Figure 30.3: ACF plot of residuals',
+                  pacf_main = 'Figure 30.4: PACF plot of residuals')
+```
+
+```{r}
+# Compute AIC Scores for neighboring models
+sort.score(AIC(model_718[["model_718_cssml"]], model_619[["model_619_cssml"]]), score = 'aic')
+
+# Compute BIC Scores for neighboring models
+sort.score(BIC(model_718[["model_718_cssml"]], model_619[["model_619_cssml"]]), score = 'bic')
+
+# Compute accuracy measures for each neighboring models
+Smodel_718_css <- accuracy(model_718[["model_718_cssml"]])[1:7]
+Smodel_619_css <- accuracy(model_619[["model_619_cssml"]])[1:7]
+
+df.Smodels.neighbors <- rbind(Smodel_718_css, Smodel_619_css) %>% data.frame()
+
+# Assign column names to the dataframe
+colnames(df.Smodels.neighbors) <- c("ME", "RMSE", "MAE", "MPE", "MAPE",
+                                    "MASE", "ACF1")
 
 
+# Assign row names indicating the SARIMA order of each model
+rownames(df.Smodels.neighbors) <- c("SARIMA(7,1,8)(1,1,2)[11]", "SARIMA(6,1,9(1,1,2)[11]")
 
+# Round the values in the dataframe to five decimal places
+round(df.Smodels.neighbors,  digits = 5)
+```
 
+The over-parameterized models fail to demonstrate significant enhancements when compared to the SARIMA(6,1,8)(1,1,2)[11] model in terms of AIC, BIC, and various error metrics. Notably, the only exception is the SARIMA(6,1,9)(1,1,2)[11], which shows an improvement in the MAPE score. Despite this, the overall lack of substantial improvement across other evaluation metrics suggests that the increased complexity of the over-parameterized models does not yield meaningful benefits. Consequently, we designate the SARIMA(6,1,8)(1,1,2)[11] model as the optimal choice, balancing model performance with complexity effectively.
 
+# Forecast
 
+```{r fig.align='center', fig.height=7, fig.width=15, message=FALSE, warning=FALSE}
+# Store optimal model
+optimal_model <- sunspot_TS %>% Arima(order=c(6,1,8),
+                                         seasonal=list(order=c(1,1,2), period=11), 
+                                         method = "CSS", lambda = 0.49)
 
+# Predict for next 10 units of time (2024 - 2054)
+predictions <- forecast(optimal_model, h = 10) 
 
+# Print Predictions
+predictions_df <- predictions %>% as.data.frame()
+row.names(predictions_df) <- 2024:2033
+predictions_df
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# Plot Forecast
+plot(predictions, type='o')
+grid(nx = NULL, ny = NULL, col = "gray", lty = "dotted")
+```
 
 
 # Appendix
 
-## Dertermining Frequency
+This appendix provides supplementary information to enhance understanding of the analysis and its technical aspects. This section hosts the code from the utilities.R script, which houses functions employed for this analysis. Additionally, it offers further details on other relevant supplementary materials.
 
-### Visual Assessment of ACF
+## Determining Frequency
+
+
+
 
 ### Residuals Check for Frequency
 
@@ -559,40 +1206,6 @@ BC_sunspot_TS %>% check_residuals(order = c(0,1,0),
 
 
 
-
-
-
-
-
-
-
-
-
-
-```{r}
-BC_sunspot_TS %>% diff(lag=11) %>%
-  ggtsdisplay(xlab="Year",
-    main="Seasonally differenced H02 scripts")
-```
-
-```{r}
-model <- Arima(BC_sunspot_TS, order=c(7,1,6), seasonal=list(order=c(1,1,2), period=11))
-
-model %>% coeftest()
-
-model %>% summary()
-
-checkresiduals(model, lag=30)
-```
-
-
-<!-- # ```{r} -->
-<!-- # BC_sunspot_TS %>% -->
-<!-- #   Arima(order=c(3,0,2), seasonal=c(3,1,2)) %>% -->
-<!-- #   forecast(h = 10) %>% -->
-<!-- #   autoplot() + -->
-<!-- #     ylab("H02 sales (million scripts)") + xlab("Year") -->
-<!-- # ``` -->
 
 
 
