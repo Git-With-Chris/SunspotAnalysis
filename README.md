@@ -16,7 +16,7 @@ The primary objectives of this project are:
 
 ## Report Preview
 
-[ReportPreview](./Images/ReportPreview.png)
+![ReportPreview](./Images/ReportPreview.png)
 
 ## Methodology
 
