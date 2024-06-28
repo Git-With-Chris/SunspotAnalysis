@@ -29,12 +29,15 @@ The methodology followed in this project includes:
 6. **Forecasting:** Using the selected model to forecast future sunspot numbers and provide insights.
 
 ## Results
+
 The results section includes the following:
 - Summary statistics and visualizations from the EDA.
 - Proposed models and their parameter estimates.
 - Model selection based on goodness-of-fit metrics.
 - Diagnostic checks of the selected model.
 - Forecasted sunspot numbers and insights derived from the analysis.
+
+![Forecast](./Images/Forecast.png)
 
 ## Conclusion
 The conclusion summarizes the key findings of the analysis, the best-fitting model, and the implications of the forecasted sunspot numbers. It also discusses any limitations of the study and suggests directions for future research.
