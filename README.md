@@ -64,10 +64,9 @@ To run the analysis and generate the report, follow these steps:
    ```
 
 4. Run the R Markdown file to generate the report.
-  
-  ```bash
-  Rscript -e "rmarkdown::render('TSA-A3.Rmd')"
-  ```
+   ```bash
+   Rscript -e "rmarkdown::render('TSA-A3.Rmd')"
+   ```
 
 ## Project Structure
 
