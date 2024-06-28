@@ -29,15 +29,12 @@ The methodology followed in this project includes:
 6. **Forecasting:** Using the selected model to forecast future sunspot numbers and provide insights.
 
 ## Results
-
 The results section includes the following:
 - Summary statistics and visualizations from the EDA.
 - Proposed models and their parameter estimates.
 - Model selection based on goodness-of-fit metrics.
 - Diagnostic checks of the selected model.
 - Forecasted sunspot numbers and insights derived from the analysis.
-
-![ReportPreview](./Images/Forecast.png)
 
 ## Conclusion
 The conclusion summarizes the key findings of the analysis, the best-fitting model, and the implications of the forecasted sunspot numbers. It also discusses any limitations of the study and suggests directions for future research.
@@ -69,6 +66,26 @@ To run the analysis and generate the report, follow these steps:
   Rscript -e "rmarkdown::render('TSA-A3.Rmd')"
   ```
 
+## Project Structure
+
+```text
+.
+|-- Images
+|   |-- Error_scores_table.png
+|   |-- Forecast.png
+|   `-- ReportPreview.png
+|-- LICENSE.txt
+|-- README.md
+|-- Resources
+|   |-- MonthlySunspotData.csv
+|   `-- YearlySunspotData.csv
+|-- SunspotAnalysis.Rmd
+|-- SunspotAnalysisReport.pdf
+`-- utilities.R
+
+3 directories, 10 files
+```
+
 ## Dependencies
 
 - R (version 4.0 or higher)
@@ -77,25 +94,3 @@ To run the analysis and generate the report, follow these steps:
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](./LICENSE.txt) file for details.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
